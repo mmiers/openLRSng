@@ -109,10 +109,11 @@ ARDUINO_VARIANT_PATH=$(ARDUINO_PATH)/hardware/arduino/variants/$(VARIANT)
 # Arduino library files used, compilation settings.
 #
 ARDUINO_CORELIB_PATH=$(ARDUINO_PATH)/hardware/arduino/cores/arduino/
+ARDUINO_DEADLIB_SRCS=HardwareSerial.cpp WString.cpp Stream.cpp IPAddress.cpp new.cpp \
+		     Print.cpp WMath.cpp Tone.cpp
+ARDUINO_LEONLIB_SRCS=CDC.cpp USBCore.cpp HID.cpp
 ARDUINO_CORELIB_SRCS=WInterrupts.c wiring.c wiring_shift.c wiring_digital.c \
-		     wiring_pulse.c wiring_analog.c \
-		     CDC.cpp Print.cpp HardwareSerial.cpp WString.cpp IPAddress.cpp \
-		     Stream.cpp main.cpp USBCore.cpp HID.cpp new.cpp Tone.cpp WMath.cpp
+		     wiring_pulse.c wiring_analog.c main.cpp
 ARDUINO_CORELIB_OBJS= $(patsubst %.c, libraries/%.o, $(patsubst %.cpp, libraries/%.o, $(ARDUINO_CORELIB_SRCS)))
 
 
@@ -130,7 +131,7 @@ INCLUDE=-I$(ARDUINO_CORELIB_PATH) -I$(ARDUINO_VARIANT_PATH) $(ARDUINO_LIB_INCL) 
 #
 # Target object files
 #
-OBJS=openLRSng.o $(ARDUINO_LIB_OBJS) libraries/libcore.a
+OBJS=openLRSng.o printf.o serial.o $(ARDUINO_LIB_OBJS) libraries/libcore.a
 
 #
 # Master target

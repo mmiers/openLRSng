@@ -69,8 +69,17 @@
 //### CODE SECTION ###
 //####################
 
+// Don't include Arduino serial
+#define HardwareSerial_h
+
 #include <Arduino.h>
 #include <EEPROM.h>
+
+#include "serial.h"
+#include "printf.h"
+
+LRSSerialPort(port0, 0);
+#define Serial  (&port0)
 
 #include "version.h"
 #include "hardware.h"

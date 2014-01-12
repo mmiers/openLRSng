@@ -1,6 +1,7 @@
 /****************************************************
  * OpenLRSng transmitter code
  ****************************************************/
+
 uint8_t RF_channel = 0;
 
 uint8_t FSstate = 0; // 1 = waiting timer, 2 = send FS, 3 sent waiting btn release
@@ -99,8 +100,8 @@ void bindMode(void)
 
   init_rfm(1);
 
-  while (Serial.available()) {
-    Serial.read();    // flush serial
+  while (lrs_inputPending(Serial)) {
+    lrs_getc(Serial);    // flush serial
   }
 
   while (1) {
@@ -129,11 +130,11 @@ void bindMode(void)
       sendBinds = 1;
     }
 
-    while (Serial.available()) {
-      switch (Serial.read()) {
+    while (lrs_inputPending(Serial)) {
+      switch (lrs_getc(Serial)) {
       case '\n':
       case '\r':
-        Serial.println(F("Enter menu..."));
+        lrs_puts(Serial, "Enter menu...");
         handleCLI();
         break;
       case '#':
@@ -190,34 +191,33 @@ void checkButton(void)
       buzzerOff();
       if (swapProfile) {
         profileSwap((activeProfile + 1) % TX_PROFILE_COUNT);
-        Serial.print("New profile:");
-        Serial.println(activeProfile);
+        lrs_printf(Serial, "New profile: %d\r\n", activeProfile);
         if (bindReadEeprom()) {
-          Serial.println("Loaded settings from EEPROM\n");
+          lrs_puts(Serial, "Loaded settings from EEPROM\n");
         } else {
-          Serial.print("EEPROM data not valid, reiniting\n");
+          lrs_puts(Serial, "EEPROM data not valid, reiniting");
           bindInitDefaults();
           bindWriteEeprom();
         }
         return;
       }
-      randomSeed(micros()); // button release time in us should give us enough seed
+      srandom(micros()); // button release time in us should give us enough seed
       bindRandomize();
       bindWriteEeprom();
       bindPrint();
     }
 just_bind:
     // Enter binding mode, automatically after recoding or when pressed for shorter time.
-    Serial.println("Entering binding mode\n");
+    lrs_puts(Serial, "Entering binding mode\n");
     bindMode();
   }
 }
 
 void checkBND(void)
 {
-  if ((Serial.available() > 3) &&
-      (Serial.read() == 'B') && (Serial.read() == 'N') &&
-      (Serial.read() == 'D') && (Serial.read() == '!')) {
+  if ((lrs_inputPending(Serial) > 3) &&
+      (lrs_getc(Serial) == 'B') && (lrs_getc(Serial) == 'N') &&
+      (lrs_getc(Serial) == 'D') && (lrs_getc(Serial) == '!')) {
     buzzerOff();
     bindMode();
   }
@@ -270,6 +270,9 @@ uint8_t serial_okToSend; // 2 if it is ok to send serial instead of servo
 void setup(void)
 {
   uint32_t start;
+
+  LRSSerialConstruct(port0, 0);
+
   setupSPI();
 #ifdef SDN_pin
   pinMode(SDN_pin, OUTPUT); //SDN
@@ -291,12 +294,12 @@ void setup(void)
 #endif
   buzzerInit();
 
-  Serial.begin(115200);
+  LRS_SerialBegin(Serial, 115200);
   profileInit();
   if (bindReadEeprom()) {
-    Serial.println("Loaded settings from EEPROM\n");
+    lrs_puts(Serial, "Loaded settings from EEPROM\n");
   } else {
-    Serial.print("EEPROM data not valid, reiniting\n");
+    lrs_puts(Serial, "EEPROM data not valid, reiniting");
     bindInitDefaults();
     bindWriteEeprom();
   }
@@ -315,20 +318,19 @@ void setup(void)
   digitalWrite(BTN, HIGH);
   Red_LED_ON ;
 
-  while (Serial.available()) {
-    Serial.read();
+  while (lrs_inputPending(Serial)) {
+    lrs_getc(Serial);
   }
 
-  Serial.print("OpenLRSng TX starting ");
+  lrs_printf(Serial, "OpenLRSng TX starting ");
   printVersion(version);
-  Serial.print(" on HW ");
-  Serial.println(BOARD_TYPE);
+  lrs_printf(Serial, " on HW %d\r\n", BOARD_TYPE);
 
   delay(200);
   checkBND();
 
   // switch to userdefined baudrate here
-  TelemetrySerial.begin(bind_data.serial_baudrate);
+  LRS_SerialBegin(TelemetrySerial, bind_data.serial_baudrate);
   checkButton();
 
   Red_LED_OFF;
@@ -376,15 +378,15 @@ uint8_t compositeRSSI(uint8_t rssi, uint8_t linkq)
 void loop(void)
 {
   if (spiReadRegister(0x0C) == 0) {     // detect the locked module and reboot
-    Serial.println("module locked?");
+    lrs_puts(Serial, "module locked?");
     Red_LED_ON;
     init_rfm(0);
     rx_reset();
     Red_LED_OFF;
   }
 
-  while (TelemetrySerial.available() && (((serial_tail + 1) % SERIAL_BUFSIZE) != serial_head)) {
-    serial_buffer[serial_tail] = TelemetrySerial.read();
+  while (lrs_inputPending(TelemetrySerial) && (((serial_tail + 1) % SERIAL_BUFSIZE) != serial_head)) {
+    serial_buffer[serial_tail] = lrs_getc(TelemetrySerial);
     serial_tail = (serial_tail + 1) % SERIAL_BUFSIZE;
   }
 
@@ -411,7 +413,7 @@ void loop(void)
           if (bind_data.flags & TELEMETRY_FRSKY) {
             frskyUserData(rx_buf[i]);
           } else {
-            TelemetrySerial.write(rx_buf[i]);
+            lrs_putc(TelemetrySerial, rx_buf[i]);
           }
         }
       } else if ((rx_buf[0] & 0x3F) == 0) {

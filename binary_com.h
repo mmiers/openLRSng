@@ -53,8 +53,8 @@ public:
   };
 
   void read_packet() {
-    while (Serial.available()) {
-      data = Serial.read();
+    while (lrs_inputPending(Serial)) {
+      data = lrs_getc(Serial);
 
       switch (state) {
       case 0:
@@ -316,8 +316,8 @@ public:
   };
 
   void protocol_head(uint8_t code, uint16_t length) {
-    Serial.write(PSP_SYNC1);
-    Serial.write(PSP_SYNC2);
+    lrs_putc(Serial, PSP_SYNC1);
+    lrs_putc(Serial, PSP_SYNC2);
 
     crc = 0; // reset crc
 
@@ -326,11 +326,11 @@ public:
   };
 
   void protocol_tail() {
-    Serial.write(crc);
+    lrs_putc(Serial, crc);
   };
 
   void serialize_uint8(uint8_t data) {
-    Serial.write(data);
+    lrs_putc(Serial, data);
     crc ^= data;
   };
 

@@ -64,7 +64,7 @@ static const char *specialStrs[] = { "PPM","RSSI","SDA","SCL","RXD","TXD","AIN",
 #error TX module cannot be used as RX
 #endif
 
-#define TelemetrySerial Serial
+#define TelemetrySerial (&port0)
 
 #define PPM_IN     A5
 #define BUZZER_ACT 9
@@ -147,7 +147,7 @@ void setupRfmInterrupt()
 #error M1 RX not verified yet
 #endif
 
-#define TelemetrySerial Serial
+#define TelemetrySerial (&port0)
 
 #define PPM_IN     5
 #define BUZZER_ACT 7
@@ -231,7 +231,7 @@ void setupRfmInterrupt()
 #error TX module cannot be used as RX
 #endif
 
-#define TelemetrySerial Serial
+#define TelemetrySerial (&port0)
 
 #define PPM_IN           3
 #define RF_OUT_INDICATOR A0
@@ -312,7 +312,7 @@ void setupRfmInterrupt()
 #endif
 
 #ifdef COMPILE_TX
-#define TelemetrySerial Serial
+#define TelemetrySerial (&port0)
 
 #define USE_ICP1 // use ICP1 for PPM input for less jitter
 
@@ -456,7 +456,7 @@ void setupRfmInterrupt()
 #error TX module cannot be used as RX
 #endif
 
-#define TelemetrySerial Serial
+#define TelemetrySerial (&port0)
 
 #define USE_ICP1 // use ICP1 for PPM input for less jitter
 #define PPM_IN 8 // ICP1
@@ -553,7 +553,7 @@ void setupRfmInterrupt()
 #ifdef COMPILE_TX
 // TX operation
 
-#define TelemetrySerial Serial
+#define TelemetrySerial (&port0)
 
 #define USE_ICP1 // use ICP1 for PPM input for less jitter
 #define PPM_IN 8 // ICP1
@@ -708,7 +708,9 @@ void setupRfmInterrupt()
 #error TX module cannot be used as RX
 #endif
 
-#define TelemetrySerial Serial1
+LRSSerialPort1(port1, 1);
+
+#define TelemetrySerial (&port1)
 
 #define USE_ICP1 // use ICP1 for PPM input for less jitter
 #define PPM_IN 4 // ICP1

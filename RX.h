@@ -1,7 +1,6 @@
 /****************************************************
  * OpenLRSng receiver code
  ****************************************************/
-
 uint8_t RF_channel = 0;
 
 uint32_t lastPacketTimeUs = 0;
@@ -304,11 +303,11 @@ uint8_t bindReceive(uint32_t timeout)
   init_rfm(1);
   RF_Mode = Receive;
   to_rx_mode();
-  Serial.println("Waiting bind\n");
+  lrs_puts(Serial, "Waiting bind\n");
 
   while ((!timeout) || ((millis() - start) < timeout)) {
     if (RF_Mode == Received) {
-      Serial.println("Got pkt\n");
+      lrs_puts(Serial, "Got pkt\n");
       spiSendAddress(0x7f);   // Send the package read command
       rxb = spiReadData();
       if (rxb == 'b') {
@@ -317,7 +316,7 @@ uint8_t bindReceive(uint32_t timeout)
         }
 
         if (bind_data.version == BINDING_VERSION) {
-          Serial.println("data good\n");
+          lrs_puts(Serial, "data good\n");
           rxb = 'B';
           tx_packet(&rxb, 1); // ACK that we got bound
           Green_LED_ON; //signal we got bound on LED:s
@@ -326,11 +325,11 @@ uint8_t bindReceive(uint32_t timeout)
       } else if ((rxb == 'p') || (rxb == 'i')) {
         uint8_t rxc_buf[sizeof(rx_config) + 1];
         if (rxb == 'p') {
-          Serial.println(F("Sending RX config"));
+          lrs_puts(Serial, "Sending RX config");
           rxc_buf[0] = 'P';
           timeout = 0;
         } else {
-          Serial.println(F("Reinit RX config"));
+          lrs_puts(Serial, "Reinit RX config");
           rxInitDefaults(1);
           rxc_buf[0] = 'I';
         }
@@ -338,7 +337,7 @@ uint8_t bindReceive(uint32_t timeout)
         tx_packet(rxc_buf, sizeof(rx_config) + 1);
       } else if (rxb == 't') {
         uint8_t rxc_buf[sizeof(rxSpecialPins) + 5];
-        Serial.println(F("Sending RX type info"));
+        lrs_puts(Serial, "Sending RX type info");
         timeout = 0;
         rxc_buf[0] = 'T';
         rxc_buf[1] = (version >> 8);
@@ -407,6 +406,8 @@ uint8_t hopcount;
 
 void setup()
 {
+  LRSSerialConstruct(port0, 0);
+
   //LEDs
   pinMode(Green_LED, OUTPUT);
   pinMode(Red_LED, OUTPUT);
@@ -421,13 +422,12 @@ void setup()
   pinMode(0, INPUT);   // Serial Rx
   pinMode(1, OUTPUT);  // Serial Tx
 
-  Serial.begin(115200);
+  LRS_SerialBegin(Serial, 115200);
   rxReadEeprom();
   failsafeLoad();
-  Serial.print("OpenLRSng RX starting ");
+  lrs_printf(Serial, "OpenLRSng RX starting ");
   printVersion(version);
-  Serial.print(" on HW ");
-  Serial.println(BOARD_TYPE);
+  lrs_printf(Serial, " on HW %d\r\n", BOARD_TYPE);
 
   setupRfmInterrupt();
 
@@ -441,11 +441,11 @@ void setup()
   }
 
   if (checkIfConnected(OUTPUT_PIN[0], OUTPUT_PIN[1]) || (!bindReadEeprom())) {
-    Serial.print("EEPROM data not valid or bind jumpper set, forcing bind\n");
+    lrs_puts(Serial, "EEPROM data not valid or bind jumpper set, forcing bind");
 
     if (bindReceive(0)) {
       bindWriteEeprom();
-      Serial.println("Saved bind data to EEPROM\n");
+      lrs_puts(Serial, "Saved bind data to EEPROM\n");
       Green_LED_ON;
     }
     setupOutputs();
@@ -454,7 +454,7 @@ void setup()
     if ((rx_config.flags & ALWAYS_BIND) && (!(rx_config.flags & SLAVE_MODE))) {
       if (bindReceive(500)) {
         bindWriteEeprom();
-        Serial.println("Saved bind data to EEPROM\n");
+        lrs_puts(Serial, "Saved bind data to EEPROM\n");
         setupOutputs(); // parameters may have changed
         Green_LED_ON;
       }
@@ -464,15 +464,15 @@ void setup()
   if ((rx_config.pinMapping[SDA_OUTPUT] == PINMAP_SDA) &&
       (rx_config.pinMapping[SCL_OUTPUT] == PINMAP_SCL)) {
     if (rx_config.flags & SLAVE_MODE) {
-      Serial.println("I am slave");
+      lrs_puts(Serial, "I am slave");
       fatalBlink(5); // not implemented
       // not reached
     } else {
-      Serial.println("Looking for slave, not implemented yet");
+      lrs_puts(Serial, "Looking for slave, not implemented yet");
     }
   }
 
-  Serial.print("Entering normal mode");
+  lrs_puts(Serial, "Entering normal mode");
 
   init_rfm(0);   // Configure the RFM22B's registers for normal operation
   RF_channel = 0;
@@ -489,13 +489,13 @@ void setup()
   to_rx_mode();
 
   if ((bind_data.flags & TELEMETRY_MASK) == TELEMETRY_FRSKY) {
-    Serial.begin(9600);
+    LRS_SerialBegin(Serial, 9600);
   } else {
-    Serial.begin(bind_data.serial_baudrate);
+    LRS_SerialBegin(Serial, bind_data.serial_baudrate);
   }
 
-  while (Serial.available()) {
-    Serial.read();
+  while (lrs_inputPending(Serial)) {
+    lrs_getc(Serial);
   }
 
   serial_head = 0;
@@ -507,8 +507,8 @@ void setup()
 
 void checkSerial()
 {
-  while (Serial.available() && (((serial_tail + 1) % SERIAL_BUFSIZE) != serial_head)) {
-    serial_buffer[serial_tail] = Serial.read();
+  while (lrs_inputPending(Serial) && (((serial_tail + 1) % SERIAL_BUFSIZE) != serial_head)) {
+    serial_buffer[serial_tail] = lrs_getc(Serial);
     serial_tail = (serial_tail + 1) % SERIAL_BUFSIZE;
   }
 }
@@ -519,7 +519,7 @@ void loop()
   uint32_t timeUs, timeMs;
 
   if (spiReadRegister(0x0C) == 0) {     // detect the locked module and reboot
-    Serial.println("RX hang");
+    lrs_puts(Serial, "RX hang\n");
     init_rfm(0);
     to_rx_mode();
   }
@@ -572,7 +572,7 @@ void loop()
           tx_buf[0] ^= 0x80; // signal that we got it
           for (i = 0; i <= (rx_buf[0] & 7);) {
             i++;
-            Serial.write(rx_buf[i]);
+            lrs_putc(Serial, rx_buf[i]);
           }
         }
       }
