@@ -708,8 +708,7 @@ void setupRfmInterrupt()
 #error TX module cannot be used as RX
 #endif
 
-LRSSerialPort1(port1, 1);
-
+LRSSerialPort(port1, 1);
 #define TelemetrySerial (&port1)
 
 #define USE_ICP1 // use ICP1 for PPM input for less jitter

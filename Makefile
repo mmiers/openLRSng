@@ -18,7 +18,7 @@ ARDUINO_PATH=/usr/share/arduino
 # 5 - DTF 4ch RX
 # 6 - Deluxe TX
 #
-BOARD_TYPE=3
+BOARD_TYPE=6
 
 #
 # You can compile all TX as TX, and all RX as either RX or TX.
@@ -132,6 +132,9 @@ INCLUDE=-I$(ARDUINO_CORELIB_PATH) -I$(ARDUINO_VARIANT_PATH) $(ARDUINO_LIB_INCL) 
 # Target object files
 #
 OBJS=openLRSng.o printf.o serial.o $(ARDUINO_LIB_OBJS) libraries/libcore.a
+ifeq ($(BOARD_TYPE),6)
+OBJS:= $(OBJS) usbcore.o
+endif
 
 #
 # Master target
@@ -147,7 +150,7 @@ define ino-command
 	$(CXX) -c $(COPTFLAGS) $(CXXFLAGS) $(CFLAGS) $(INCLUDE) -o $@ -x c++ $<
 endef
 define cc-command
-	$(CC) -c $(COPTFLAGS) $(CFLAGS) $(INCLUDE) -o $@ $<
+	$(CC)  -c $(COPTFLAGS) $(CFLAGS) $(INCLUDE) -o $@ $<
 endef
 define cxx-command
 	$(CXX) -c $(COPTFLAGS) $(CXXFLAGS) $(CFLAGS) $(INCLUDE) -o $@ $<

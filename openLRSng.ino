@@ -78,8 +78,15 @@
 #include "serial.h"
 #include "printf.h"
 
+#if BOARD_TYPE == 6
+LRSUSBSerialPort(portUSB);
+#define Serial              (&portUSB)
+#define SERIAL_CONSTRUCT()  LRSUSBSerialConstruct(Serial)
+#else
 LRSSerialPort(port0, 0);
-#define Serial  (&port0)
+#define Serial              (&port0)
+#define SERIAL_CONSTRUCT()  LRSSerialConstruct(Serial, 0)
+#endif
 
 #include "version.h"
 #include "hardware.h"
@@ -94,3 +101,23 @@ LRSSerialPort(port0, 0);
 #else // COMPILE_RX
 #include "RX.h"
 #endif
+
+extern "C" void USBDevice_Attach();
+
+int main(void)
+{
+  init();
+
+#if BOARD_TYPE == 6
+  USBDevice_Attach();
+#endif
+
+  setup();
+
+  for (;;) {
+    loop();
+  }
+
+  return 0;
+}
+

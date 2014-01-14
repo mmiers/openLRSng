@@ -83,11 +83,20 @@ typedef struct
 }
 LRS_SerBuffer;
 
+typedef enum
+{
+  LRS_SERIAL_TTY,
+  LRS_SERIAL_USB
+}
+LRS_SerType;
+
 ///
 /// The LRS_Serial data structure definition
 ///
 typedef struct
 {
+  LRS_SerType _type;
+
   // register accessors
   volatile uint8_t * _ubrrh;
   volatile uint8_t * _ubrrl;
@@ -140,14 +149,16 @@ void LRS_SerialFreeBuffer(LRS_SerBuffer *buffer);
 // LRS serial API
 //
 void     LRS_SerialSetup(LRS_Serial *ser, const uint8_t portNumber,
+                         LRS_SerType type,
                          volatile uint8_t *ubrrh, volatile uint8_t *ubrrl,
                          volatile uint8_t *ucsra, volatile uint8_t *ucsrb,
-                         const uint8_t u2x, const uint8_t portEnableBits, const uint8_t portTxBits);
+                         const uint8_t u2x, const uint8_t portEnableBits,
+                         const uint8_t portTxBits);
 
 /// Serial API
 void     LRS_SerialBegin(LRS_Serial *, long baud);
 void     LRS_SerialBeginExt(LRS_Serial *, long baud,
-                        unsigned int rxSpace, unsigned int txSpace);
+                            unsigned int rxSpace, unsigned int txSpace);
 void     LRS_SerialEnd(LRS_Serial *);
 int      LRS_SerialAvailable(LRS_Serial *);
 int      LRS_SerialTxSpace(LRS_Serial *);
@@ -253,8 +264,8 @@ struct hack
                    UCSR##_num##B,                                \
                    _BV(UDRIE##_num))
 #define LRSSerialConstruct(_name, _num)                          \
-  LRS_SerialSetup(&_name,                                        \
-                  _num,                                          \
+  LRS_SerialSetup(_name,                                         \
+                  _num, LRS_SERIAL_TTY,                          \
                   &UBRR##_num##H,                                \
                   &UBRR##_num##L,                                \
                   &UCSR##_num##A,                                \
@@ -263,15 +274,27 @@ struct hack
                   (_BV(RXEN##_num) | _BV(TXEN##_num) | _BV(RXCIE##_num)), \
                   (_BV(UDRIE##_num)));                           \
 
-#if   defined(UDR3)
-# define FS_MAX_PORTS   4
-#elif defined(UDR2)
-# define FS_MAX_PORTS   3
-#elif defined(UDR1)
-# define FS_MAX_PORTS   2
+#if BOARD_TYPE == 6
+# define USB_MAX_PORTS  1
 #else
-# define FS_MAX_PORTS   1
+# define USB_MAX_PORTS  0
 #endif
+
+#if   defined(UDR3)
+# define FS_MAX_PORTS   (4 + USB_MAX_PORTS)
+#elif defined(UDR2)
+# define FS_MAX_PORTS   (3 + USB_MAX_PORTS)
+#elif defined(UDR1)
+# define FS_MAX_PORTS   (2 + USB_MAX_PORTS)
+#else
+# define FS_MAX_PORTS   (1 + USB_MAX_PORTS)
+#endif
+
+#define LRSUSBSerialPort(_name)                                  \
+  LRS_Serial _name;
+#define LRSUSBSerialConstruct(_name)                             \
+  LRS_SerialSetup(_name, FS_MAX_PORTS - 1, LRS_SERIAL_USB,       \
+                  0, 0, 0, 0, 0, 0, 0);                          \
 
 #if defined(__cplusplus)
 }

@@ -59,14 +59,186 @@ void LRS_SerialSetBlockingWrites(LRS_Serial *ser, bool blocking)
   ser->_nonblocking_writes = !blocking;
 }
 
+#if BOARD_TYPE == 6
+/*
+** Copyright (c) 2011, Peter Barrett  
+**  
+** Permission to use, copy, modify, and/or distribute this software for  
+** any purpose with or without fee is hereby granted, provided that the  
+** above copyright notice and this permission notice appear in all copies.  
+** 
+** THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL  
+** WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED  
+** WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR  
+** BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES  
+** OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,  
+** WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION,  
+** ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS  
+** SOFTWARE.  
+*/
+#include "usbapi.h"
+#include "usbcore.h"
+#include "usbdesc.h"
+
+#include <avr/wdt.h>
+#include <avr/pgmspace.h>
+
+typedef struct
+{
+    uint32_t  dwDTERate;
+    uint8_t   bCharFormat;
+    uint8_t   bParityType;
+    uint8_t   bDataBits;
+    uint8_t   lineState;
+}
+LineInfo;
+
+static volatile LineInfo _usbLineInfo = { 57600, 0x00, 0x00, 0x00, 0x00 };
+
+#define WEAK __attribute__ ((weak))
+
+extern const CDCDescriptor _cdcInterface PROGMEM;
+const CDCDescriptor _cdcInterface =
+{
+    D_IAD(0,2,CDC_COMMUNICATION_INTERFACE_CLASS,CDC_ABSTRACT_CONTROL_MODEL,1),
+
+    //    CDC communication interface
+    D_INTERFACE(CDC_ACM_INTERFACE,1,CDC_COMMUNICATION_INTERFACE_CLASS,CDC_ABSTRACT_CONTROL_MODEL,0),
+    D_CDCCS(CDC_HEADER,0x10,0x01),                                // Header (1.10 bcd)
+    D_CDCCS(CDC_CALL_MANAGEMENT,1,1),                            // Device handles call management (not)
+    D_CDCCS4(CDC_ABSTRACT_CONTROL_MANAGEMENT,6),                // SET_LINE_CODING, GET_LINE_CODING, SET_CONTROL_LINE_STATE supported
+    D_CDCCS(CDC_UNION,CDC_ACM_INTERFACE,CDC_DATA_INTERFACE),    // Communication interface is master, data interface is slave 0
+    D_ENDPOINT(USB_ENDPOINT_IN (CDC_ENDPOINT_ACM),USB_ENDPOINT_TYPE_INTERRUPT,0x10,0x40),
+
+    //    CDC data interface
+    D_INTERFACE(CDC_DATA_INTERFACE,2,CDC_DATA_INTERFACE_CLASS,0,0),
+    D_ENDPOINT(USB_ENDPOINT_OUT(CDC_ENDPOINT_OUT),USB_ENDPOINT_TYPE_BULK,0x40,0),
+    D_ENDPOINT(USB_ENDPOINT_IN (CDC_ENDPOINT_IN ),USB_ENDPOINT_TYPE_BULK,0x40,0)
+};
+
+int WEAK CDC_GetInterface(uint8_t* interfaceNum)
+{
+    interfaceNum[0] += 2;    // uses 2
+    return USB_SendControl(TRANSFER_PGM,&_cdcInterface,sizeof(_cdcInterface));
+}
+
+bool WEAK CDC_Setup(Setup* setup)
+{
+    uint8_t r = setup->bRequest;
+    uint8_t requestType = setup->bmRequestType;
+
+    if (REQUEST_DEVICETOHOST_CLASS_INTERFACE == requestType)
+    {
+        if (CDC_GET_LINE_CODING == r)
+        {
+            USB_SendControl(0,(void*)&_usbLineInfo,7);
+            return true;
+        }
+    }
+
+    if (REQUEST_HOSTTODEVICE_CLASS_INTERFACE == requestType)
+    {
+        if (CDC_SET_LINE_CODING == r)
+        {
+            USB_RecvControl((void*)&_usbLineInfo,7);
+            return true;
+        }
+
+        if (CDC_SET_CONTROL_LINE_STATE == r)
+        {
+            _usbLineInfo.lineState = setup->wValueL;
+
+            // auto-reset into the bootloader is triggered when the port, already 
+            // open at 1200 bps, is closed.  this is the signal to start the watchdog
+            // with a relatively long period so it can finish housekeeping tasks
+            // like servicing endpoints before the sketch ends
+            if (1200 == _usbLineInfo.dwDTERate) {
+                // We check DTR state to determine if host port is open (bit 0 of lineState).
+                if ((_usbLineInfo.lineState & 0x01) == 0) {
+                    *(uint16_t *)0x0800 = 0x7777;
+                    wdt_enable(WDTO_120MS);
+                } else {
+                    // Most OSs do some intermediate steps when configuring ports and DTR can
+                    // twiggle more than once before stabilizing.
+                    // To avoid spurious resets we set the watchdog to 250ms and eventually
+                    // cancel if DTR goes back high.
+    
+                    wdt_disable();
+                    wdt_reset();
+                    *(uint16_t *)0x0800 = 0x0;
+                }
+            }
+            return true;
+        }
+    }
+    return false;
+}
+
+
+int _serialPeek = -1;
+
+void USBSerial_Accept(void) 
+{
+    // NOTE!  We're only good for ONE USB serial port.
+    LRS_SerBuffer *buffer = &__LRS__rxBuffer[FS_MAX_PORTS-1];
+
+    int i = (unsigned int)(buffer->head+1) & buffer->mask;
+
+    // if we should be storing the received character into the location
+    // just before the tail (meaning that the head would advance to the
+    // current location of the tail), we're about to overflow the buffer
+    // and so we don't write the character or advance the head.
+
+    // while we have room to store a byte
+    while (i != buffer->tail) {
+        int c = USB_Get(CDC_RX);
+        if (c == -1)
+            break;    // no more data
+        buffer->bytes[buffer->head] = c;
+        buffer->head = i;
+        i = (unsigned int)(buffer->head+1) & buffer->mask;
+    }
+}
+
+void USBSerial_Flush(void)
+{
+    USB_Flush(CDC_TX);
+}
+
+size_t USBSerial_Write(uint8_t c)
+{
+    /* only try to send bytes if the high-level CDC connection itself 
+     is open (not just the pipe) - the OS should set lineState when the port
+     is opened and clear lineState when the port is closed.
+     bytes sent before the user opens the connection or after
+     the connection is closed are lost - just like with a UART. */
+    
+    // TODO - ZE - check behavior on different OSes and test what happens if an
+    // open connection isn't broken cleanly (cable is yanked out, host dies
+    // or locks up, or host virtual serial port hangs)
+    if (_usbLineInfo.lineState > 0)    {
+        int r = USB_Send(CDC_TX,&c,1);
+        if (r > 0) {
+            return r;
+        } else {
+            return 0;
+        }
+    }
+    return 0;
+}
+
+#endif
+
 //
 // Constructor /////////////////////////////////////////////////////////////////
 //
 void LRS_SerialSetup(LRS_Serial *ser, const uint8_t portNumber,
+                     LRS_SerType type,
                      volatile uint8_t *ubrrh, volatile uint8_t *ubrrl,
                      volatile uint8_t *ucsra, volatile uint8_t *ucsrb, const uint8_t u2x,
                      const uint8_t portEnableBits, const uint8_t portTxBits)
 {
+  ser->_type = type;
   ser->_ubrrh = ubrrh;
   ser->_ubrrl = ubrrl;
   ser->_ucsra = ucsra;
@@ -118,6 +290,12 @@ void LRS_SerialBeginExt(LRS_Serial *ser, long baud,
 
   // mark the port as open
   ser->_open = true;
+
+#if BOARD_TYPE == 6
+  // Short circuit for USB
+  if (ser->_type == LRS_SERIAL_USB)
+    return;
+#endif
 
   // If the user has supplied a new baud rate, compute the new UBRR value.
   if (baud > 0) {
@@ -202,6 +380,14 @@ int LRS_SerialPeek(LRS_Serial *ser)
 
 void LRS_SerialFlush(LRS_Serial *ser)
 {
+#if BOARD_TYPE == 6
+  // Short circuit on USB
+  if (ser->_type == LRS_SERIAL_USB) {
+    USBSerial_Flush();
+    return;
+  }
+#endif
+
   // don't reverse this or there may be problems if the RX interrupt
   // occurs after reading the value of _rxBuffer->head but before writing
   // the value to _rxBuffer->tail; the previous value of head
@@ -225,6 +411,13 @@ size_t LRS_SerialWrite(LRS_Serial *ser, uint8_t c)
 
   if (!ser->_open) // drop bytes if not open
     return 0;
+
+#if BOARD_TYPE == 6
+  if (ser->_type == LRS_SERIAL_USB) {
+    USBSerial_Write(c);
+    return 0;
+  }
+#endif
 
   // wait for room in the tx buffer
   i = (ser->_txBuffer->head + 1) & ser->_txBuffer->mask;
@@ -295,4 +488,3 @@ void LRS_SerialFreeBuffer(LRS_SerBuffer *buffer)
     buffer->bytes = NULL;
   }
 }
-

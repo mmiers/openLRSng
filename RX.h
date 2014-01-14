@@ -406,7 +406,7 @@ uint8_t hopcount;
 
 void setup()
 {
-  LRSSerialConstruct(port0, 0);
+  SERIAL_CONSTRUCT();
 
   //LEDs
   pinMode(Green_LED, OUTPUT);

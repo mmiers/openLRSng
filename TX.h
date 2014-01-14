@@ -271,7 +271,7 @@ void setup(void)
 {
   uint32_t start;
 
-  LRSSerialConstruct(port0, 0);
+  SERIAL_CONSTRUCT();
 
   setupSPI();
 #ifdef SDN_pin
