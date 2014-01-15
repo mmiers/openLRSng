@@ -202,7 +202,7 @@ void rxPrint(void)
     if (rx_config.pinMapping[i] < 16) {
       lrs_printf(Serial, "PWM channel %d\r\n", rx_config.pinMapping[i] + 1);
     } else {
-      lrs_printf_c(Serial, SPECIALSTR(rx_config.pinMapping[i]));
+      lrs_printf(Serial, "%s\r\n", SPECIALSTR(rx_config.pinMapping[i]));
     }
   }
   lrs_printf(Serial, "F) Failsafe delay       : "); rxPrintDTime(rx_config.failsafeDelay);
@@ -289,7 +289,7 @@ void RX_menu_headers(void)
     printVersion(version);
     lrs_printf(Serial, " - receiver configurator, rx sw ");
     printVersion(rxcVersion);
-    lrs_puts(Serial, "Use numbers [1-D] to edit ports [E-Q] for settings");
+    lrs_puts(Serial, "\r\nUse numbers [1-D] to edit ports [E-Q] for settings");
     lrs_puts(Serial, "[R] revert RX settings to defaults");
     lrs_puts(Serial, "[S] save settings to RX");
     lrs_puts(Serial, "[X] abort changes and exit RX config\n");
@@ -964,3 +964,4 @@ void binaryMode()
     }
   }
 }
+

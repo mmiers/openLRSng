@@ -12,7 +12,7 @@ ARDUINO_PATH=/usr/share/arduino
 # Board type can be one of 6 values:
 # 0 - Flytron M1 TX
 # 1 - Flytron M1 RX
-# 2 - Flytron M2, M3 TX, Orange-TX
+# 2 - Flytron M2, M3 TX, HK Orange-TX
 # 3 - Flytron V2 RX, Hawkeye RX, HK Orange-RX
 # 4 - Hawkeye TX, OpenLRSng TX
 # 5 - DTF 4ch RX
