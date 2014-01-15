@@ -17,10 +17,6 @@ static char buf[12];
 static uint32_t num;
 static uint8_t  flags;
 
-extern void notify_putc(char);
-
-static size_t (*putch)(SerialPort *, uint8_t) = SerialWrite;
-
 static void
 out(char c)
 {
@@ -47,17 +43,16 @@ divOut(uint32_t div)
 }
 
 void
-do_printf(SerialPort *ser, const char *fmt, ...)
+format_output(size_t (*putc)(void *data, char ch),
+              void *data, const char *fmt, va_list va)
 {
-  va_list va;
   char ch;
   char* p;
 
-  va_start(va,fmt);
-
   while ((ch = pgm_read_byte(fmt++))) {
     if (ch != '%') {
-      putch(ser, ch);
+      if (!(*putc)(data, ch))
+        return;
     }
     else {
       flags = 0;
@@ -147,13 +142,103 @@ do_printf(SerialPort *ser, const char *fmt, ...)
       bf = p;
       while (*bf++ && w > 0)
         w--;
-      while (w-- > 0)
-        putch(ser, (flags&PRINTF_LZ) ? '0' : ' ');
-      while ((ch= *p++))
-        putch(ser, ch);
+      while (w-- > 0) {
+        if (!(*putc)(data, (flags&PRINTF_LZ) ? '0' : ' '))
+          return;
+      }
+      while ((ch= *p++)) {
+        if (!(*putc)(data, ch))
+          return;
+      }
     }
   }
 error:
+  va_end(va);
+}
+
+/*
+ * Helper for buffer output
+ */
+static size_t maxBuf = 0;
+static size_t index = 0;
+static size_t
+bufferPut(void *data, char ch)
+{
+  if (index >= (maxBuf - 1))
+    return 0;
+  ((char *)data)[index] = ch;
+  index++;
+  return 1;
+}
+
+/* BUFFER FAMILY */
+void
+do_vsnprintf(char *buf, size_t size, const char *fmt, va_list va)
+{
+  /* Have to keep room for the trailing NUL */
+  if (size == 1) {
+    buf[0] = 0;
+    return;
+  }
+  maxBuf = size;
+  index = 0;
+  format_output(bufferPut, buf, fmt, va);
+  buf[index] = 0;
+}
+
+void
+do_snprintf(char *buf, size_t size, const char *fmt, ...)
+{
+  va_list va;
+
+  /* Have to keep room for the trailing NUL */
+  if (size == 1) {
+    buf[0] = 0;
+    return;
+  }
+  va_start(va, fmt);
+  maxBuf = size;
+  index = 0;
+  format_output(bufferPut, buf, fmt, va);
+  buf[index] = 0;
+  va_end(va);
+}
+
+void
+do_vsprintf(char *buf, const char *fmt, va_list va)
+{
+  maxBuf = (size_t)-1;
+  index = 0;
+  format_output(bufferPut, buf, fmt, va);
+  buf[index] = 0;
+}
+
+void
+do_sprintf(char *buf, const char *fmt, ...)
+{
+  va_list va;
+
+  maxBuf = (size_t)-1;
+  index = 0;
+  va_start(va, fmt);
+  format_output(bufferPut, buf, fmt, va);
+  buf[index] = 0;
+  va_end(va);
+}
+
+void
+do_vprintf(SerialPort *ser, const char *fmt, va_list va)
+{
+  format_output((size_t (*)(void *, char))SerialWrite, ser, fmt, va);
+}
+
+void
+do_printf(SerialPort *ser, const char *fmt, ...)
+{
+  va_list va;
+
+  va_start(va,fmt);
+  format_output((size_t (*)(void *, char))SerialWrite, ser, fmt, va);
   va_end(va);
 }
 
@@ -161,7 +246,7 @@ void
 do_puts(SerialPort *ser, const char *str)
 {
     do_printf(ser, str);
-    putch(ser, '\r');
-    putch(ser, '\n');
+    SerialWrite(ser, '\r');
+    SerialWrite(ser, '\n');
 }
 

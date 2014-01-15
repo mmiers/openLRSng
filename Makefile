@@ -110,10 +110,10 @@ ARDUINO_VARIANT_PATH=$(ARDUINO_PATH)/hardware/arduino/variants/$(VARIANT)
 #
 ARDUINO_CORELIB_PATH=$(ARDUINO_PATH)/hardware/arduino/cores/arduino/
 ARDUINO_DEADLIB_SRCS=HardwareSerial.cpp WString.cpp Stream.cpp IPAddress.cpp new.cpp \
-		     Print.cpp WMath.cpp Tone.cpp
+		     Print.cpp WMath.cpp Tone.cpp main.cpp
 ARDUINO_LEONLIB_SRCS=CDC.cpp USBCore.cpp HID.cpp
 ARDUINO_CORELIB_SRCS=WInterrupts.c wiring.c wiring_shift.c wiring_digital.c \
-		     wiring_pulse.c wiring_analog.c main.cpp
+		     wiring_pulse.c wiring_analog.c
 ARDUINO_CORELIB_OBJS= $(patsubst %.c, libraries/%.o, $(patsubst %.cpp, libraries/%.o, $(ARDUINO_CORELIB_SRCS)))
 
 
@@ -180,11 +180,11 @@ clean:
 	rm -f *.[aod] libraries/*.[aod] *.elf *.eep *.d *.hex
 
 openLRSng.hex: $(OBJS)
-	@$(CC) -Os -Wl,--gc-sections -mmcu=$(CPU) -o openLRSng.elf $(OBJS) -Llibraries -lm 
-	@$(OBJCOPY) -O ihex -j .eeprom --set-section-flags=.eeprom=alloc,load \
+	$(CC) -Os -Wl,--gc-sections -mmcu=$(CPU) -o openLRSng.elf $(OBJS) -Llibraries -lm 
+	$(OBJCOPY) -O ihex -j .eeprom --set-section-flags=.eeprom=alloc,load \
 		--no-change-warnings --change-section-lma .eeprom=0 \
 		openLRSng.elf openLRSng.eep 
-	@$(OBJCOPY) -O ihex -R .eeprom openLRSng.elf openLRSng.hex 
+	$(OBJCOPY) -O ihex -R .eeprom openLRSng.elf openLRSng.hex 
 	@echo "NOTE: Deployment size is text + data."
 	@$(SIZE) openLRSng.elf
 
