@@ -73,7 +73,6 @@
 #define HardwareSerial_h
 
 #include <Arduino.h>
-#include <EEPROM.h>
 
 #include "serial.h"
 #include "printf.h"
