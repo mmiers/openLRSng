@@ -19,7 +19,7 @@ static uint8_t  flags;
 
 extern void notify_putc(char);
 
-static void (*putch)(LRS_Serial *, char) = LRS_SerialWrite;
+static size_t (*putch)(LRS_Serial *, uint8_t) = LRS_SerialWrite;
 
 static void
 out(char c)
