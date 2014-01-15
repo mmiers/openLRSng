@@ -18,7 +18,7 @@ ARDUINO_PATH=/usr/share/arduino
 # 5 - DTF 4ch RX
 # 6 - Deluxe TX
 #
-BOARD_TYPE=6
+BOARD_TYPE=2
 
 #
 # You can compile all TX as TX, and all RX as either RX or TX.

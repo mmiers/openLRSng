@@ -294,7 +294,7 @@ void setup(void)
 #endif
   buzzerInit();
 
-  LRS_SerialBegin(Serial, 115200);
+  SerialBegin(Serial, 115200);
   profileInit();
   if (bindReadEeprom()) {
     lrs_puts(Serial, "Loaded settings from EEPROM\n");
@@ -330,7 +330,7 @@ void setup(void)
   checkBND();
 
   // switch to userdefined baudrate here
-  LRS_SerialBegin(TelemetrySerial, bind_data.serial_baudrate);
+  SerialBegin(TelemetrySerial, bind_data.serial_baudrate);
   checkButton();
 
   Red_LED_OFF;

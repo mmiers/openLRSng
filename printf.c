@@ -19,7 +19,7 @@ static uint8_t  flags;
 
 extern void notify_putc(char);
 
-static size_t (*putch)(LRS_Serial *, uint8_t) = LRS_SerialWrite;
+static size_t (*putch)(SerialPort *, uint8_t) = SerialWrite;
 
 static void
 out(char c)
@@ -47,7 +47,7 @@ divOut(uint32_t div)
 }
 
 void
-do_printf(LRS_Serial *ser, const char *fmt, ...)
+do_printf(SerialPort *ser, const char *fmt, ...)
 {
   va_list va;
   char ch;
@@ -158,7 +158,7 @@ error:
 }
 
 void
-do_puts(LRS_Serial *ser, const char *str)
+do_puts(SerialPort *ser, const char *str)
 {
     do_printf(ser, str);
     putch(ser, '\r');

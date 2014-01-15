@@ -78,13 +78,13 @@
 #include "printf.h"
 
 #if BOARD_TYPE == 6
-LRSUSBSerialPort(portUSB);
+USBSerialPort(portUSB);
 #define Serial              (&portUSB)
-#define SERIAL_CONSTRUCT()  LRSUSBSerialConstruct(Serial)
+#define SERIAL_CONSTRUCT()  USBSerialConstruct(Serial)
 #else
-LRSSerialPort(port0, 0);
+SerialPort(port0, 0);
 #define Serial              (&port0)
-#define SERIAL_CONSTRUCT()  LRSSerialConstruct(Serial, 0)
+#define SERIAL_CONSTRUCT()  SerialConstruct(Serial, 0)
 #endif
 
 #include "version.h"

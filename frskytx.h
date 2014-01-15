@@ -25,7 +25,7 @@ void frskyInit(bool isSmartPort)
 {
   frskyLast = micros();
   frskyIsSmartPort = isSmartPort;
-  LRS_SerialBegin(TelemetrySerial, isSmartPort ? SMARTPORT_BAUDRATE : FRSKY_BAUDRATE);
+  SerialBegin(TelemetrySerial, isSmartPort ? SMARTPORT_BAUDRATE : FRSKY_BAUDRATE);
 }
 
 void frskyUserData(uint8_t c)

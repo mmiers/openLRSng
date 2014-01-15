@@ -35,26 +35,26 @@
  */
 #include "serial.h"
 
-LRS_SerBuffer __LRS__rxBuffer[FS_MAX_PORTS];
-LRS_SerBuffer __LRS__txBuffer[FS_MAX_PORTS];
+SerialBuffer __Serial__rxBuffer[FS_MAX_PORTS];
+SerialBuffer __Serial__txBuffer[FS_MAX_PORTS];
 
 /// Bit mask for initialized ports
-static uint8_t _LRS_SerialInitialized;
-
-/// Tell if the serial port has been initialized
-static bool LRS_SerialGetInitialized(uint8_t port)
-{
-  return (1<<port) & _LRS_SerialInitialized;
-}
+static uint8_t _SerialInitialized;
 
 /// Set if the serial port has been initialized
-static void LRS_SerialSetInitialized(uint8_t port)
+static void SerialSetInitialized(uint8_t port)
 {
-  _LRS_SerialInitialized |= (1<<port);
+  _SerialInitialized |= (1<<port);
+}
+
+/// Tell if the serial port has been initialized
+bool SerialGetInitialized(uint8_t port)
+{
+  return (1<<port) & _SerialInitialized;
 }
 
 // ask for writes to be blocking or non-blocking
-void LRS_SerialSetBlockingWrites(LRS_Serial *ser, bool blocking)
+void SerialSetBlockingWrites(SerialPort *ser, bool blocking)
 {
   ser->_nonblocking_writes = !blocking;
 }
@@ -180,7 +180,7 @@ int _serialPeek = -1;
 void USBSerial_Accept(void) 
 {
     // NOTE!  We're only good for ONE USB serial port.
-    LRS_SerBuffer *buffer = &__LRS__rxBuffer[FS_MAX_PORTS-1];
+    SerialBuffer *buffer = &__Serial__rxBuffer[FS_MAX_PORTS-1];
 
     int i = (unsigned int)(buffer->head+1) & buffer->mask;
 
@@ -232,11 +232,11 @@ size_t USBSerial_Write(uint8_t c)
 //
 // Constructor /////////////////////////////////////////////////////////////////
 //
-void LRS_SerialSetup(LRS_Serial *ser, const uint8_t portNumber,
-                     LRS_SerType type,
-                     volatile uint8_t *ubrrh, volatile uint8_t *ubrrl,
-                     volatile uint8_t *ucsra, volatile uint8_t *ucsrb, const uint8_t u2x,
-                     const uint8_t portEnableBits, const uint8_t portTxBits)
+void SerialSetup(SerialPort *ser, const uint8_t portNumber,
+                 SerialType type,
+                 volatile uint8_t *ubrrh, volatile uint8_t *ubrrl,
+                 volatile uint8_t *ucsra, volatile uint8_t *ucsrb, const uint8_t u2x,
+                 const uint8_t portEnableBits, const uint8_t portTxBits)
 {
   ser->_type = type;
   ser->_ubrrh = ubrrh;
@@ -246,20 +246,20 @@ void LRS_SerialSetup(LRS_Serial *ser, const uint8_t portNumber,
   ser->_u2x   = u2x;
   ser->_portEnableBits = portEnableBits;
   ser->_portTxBits     = portTxBits;
-  ser->_rxBuffer = &__LRS__rxBuffer[portNumber];
-  ser->_txBuffer = &__LRS__txBuffer[portNumber];
+  ser->_rxBuffer = &__Serial__rxBuffer[portNumber];
+  ser->_txBuffer = &__Serial__txBuffer[portNumber];
 
-  LRS_SerialSetInitialized(portNumber);
-  LRS_SerialBegin(ser, 57600);
+  SerialSetInitialized(portNumber);
+  SerialBegin(ser, 57600);
 }
 
-void LRS_SerialBegin(LRS_Serial *ser, long baud)
+void SerialBegin(SerialPort *ser, long baud)
 {
-  LRS_SerialBeginExt(ser, baud, 0, 0);
+  SerialBeginExt(ser, baud, 0, 0);
 }
 
-void LRS_SerialBeginExt(LRS_Serial *ser, long baud,
-                        unsigned int rxSpace, unsigned int txSpace)
+void SerialBeginExt(SerialPort *ser, long baud,
+                    unsigned int rxSpace, unsigned int txSpace)
 {
   uint16_t ubrr;
   bool use_u2x = true;
@@ -274,13 +274,13 @@ void LRS_SerialBeginExt(LRS_Serial *ser, long baud,
       txSpace = ser->_txBuffer->mask + 1;
 
     // close the port in its current configuration, clears _open
-    LRS_SerialEnd(ser);
+    SerialEnd(ser);
   }
 
   // allocate buffers
-  if (!LRS_SerialAllocBuffer(ser->_rxBuffer, rxSpace ? : DEFAULT_RX_BUFFER_SIZE) ||
-      !LRS_SerialAllocBuffer(ser->_txBuffer, txSpace ? : DEFAULT_TX_BUFFER_SIZE)) {
-    LRS_SerialEnd(ser);
+  if (!SerialAllocBuffer(ser->_rxBuffer, rxSpace ? : DEFAULT_RX_BUFFER_SIZE) ||
+      !SerialAllocBuffer(ser->_txBuffer, txSpace ? : DEFAULT_TX_BUFFER_SIZE)) {
+    SerialEnd(ser);
     return; // couldn't allocate buffers - fatal
   }
 
@@ -293,7 +293,7 @@ void LRS_SerialBeginExt(LRS_Serial *ser, long baud,
 
 #if BOARD_TYPE == 6
   // Short circuit for USB
-  if (ser->_type == LRS_SERIAL_USB)
+  if (ser->_type == SERIAL_USB)
     return;
 #endif
 
@@ -322,37 +322,37 @@ void LRS_SerialBeginExt(LRS_Serial *ser, long baud,
   *ser->_ucsrb |= ser->_portEnableBits;
 }
 
-void LRS_SerialEnd(LRS_Serial *ser)
+void SerialEnd(SerialPort *ser)
 {
   *ser->_ucsrb &= ~(ser->_portEnableBits | ser->_portTxBits);
 
-  LRS_SerialFreeBuffer(ser->_rxBuffer);
-  LRS_SerialFreeBuffer(ser->_txBuffer);
+  SerialFreeBuffer(ser->_rxBuffer);
+  SerialFreeBuffer(ser->_txBuffer);
   ser->_open = false;
 }
 
-uint16_t LRS_SerialRxOverflowCounter(LRS_Serial *ser)
+uint16_t SerialRxOverflowCounter(SerialPort *ser)
 {
   if (!ser->_open)
     return 0;
   return ser->_rxBuffer->overflow;
 }
 
-int LRS_SerialAvailable(LRS_Serial *ser)
+int SerialAvailable(SerialPort *ser)
 {
   if (!ser->_open)
     return (-1);
   return ((ser->_rxBuffer->head - ser->_rxBuffer->tail) & ser->_rxBuffer->mask);
 }
 
-int LRS_SerialTxSpace(LRS_Serial *ser)
+int SerialTxSpace(SerialPort *ser)
 {
   if (!ser->_open)
     return (-1);
   return ((ser->_txBuffer->mask+1) - ((ser->_txBuffer->head - ser->_txBuffer->tail) & ser->_txBuffer->mask));
 }
 
-int LRS_SerialRead(LRS_Serial *ser)
+int SerialRead(SerialPort *ser)
 {
   uint8_t c;
 
@@ -367,7 +367,7 @@ int LRS_SerialRead(LRS_Serial *ser)
   return (c);
 }
 
-int LRS_SerialPeek(LRS_Serial *ser)
+int SerialPeek(SerialPort *ser)
 {
 
   // if the head and tail are equal, the buffer is empty
@@ -378,11 +378,11 @@ int LRS_SerialPeek(LRS_Serial *ser)
   return (ser->_rxBuffer->bytes[ser->_rxBuffer->tail]);
 }
 
-void LRS_SerialFlush(LRS_Serial *ser)
+void SerialFlush(SerialPort *ser)
 {
 #if BOARD_TYPE == 6
   // Short circuit on USB
-  if (ser->_type == LRS_SERIAL_USB) {
+  if (ser->_type == SERIAL_USB) {
     USBSerial_Flush();
     return;
   }
@@ -405,7 +405,7 @@ void LRS_SerialFlush(LRS_Serial *ser)
   ser->_txBuffer->tail = ser->_txBuffer->head;
 }
 
-size_t LRS_SerialWrite(LRS_Serial *ser, uint8_t c)
+size_t SerialWrite(SerialPort *ser, uint8_t c)
 {
   uint16_t i;
 
@@ -413,7 +413,7 @@ size_t LRS_SerialWrite(LRS_Serial *ser, uint8_t c)
     return 0;
 
 #if BOARD_TYPE == 6
-  if (ser->_type == LRS_SERIAL_USB) {
+  if (ser->_type == SERIAL_USB) {
     USBSerial_Write(c);
     return 0;
   }
@@ -443,7 +443,7 @@ size_t LRS_SerialWrite(LRS_Serial *ser, uint8_t c)
 }
 
 // Buffer management ///////////////////////////////////////////////////////////
-bool LRS_SerialAllocBuffer(LRS_SerBuffer *buffer, unsigned int size)
+bool SerialAllocBuffer(SerialBuffer *buffer, unsigned int size)
 {
   uint16_t  mask;
   uint8_t    shift;
@@ -479,7 +479,7 @@ bool LRS_SerialAllocBuffer(LRS_SerBuffer *buffer, unsigned int size)
   return (buffer->bytes != NULL);
 }
 
-void LRS_SerialFreeBuffer(LRS_SerBuffer *buffer)
+void SerialFreeBuffer(SerialBuffer *buffer)
 {
   buffer->head = buffer->tail = 0;
   buffer->mask = 0;

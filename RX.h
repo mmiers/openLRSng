@@ -422,7 +422,7 @@ void setup()
   pinMode(0, INPUT);   // Serial Rx
   pinMode(1, OUTPUT);  // Serial Tx
 
-  LRS_SerialBegin(Serial, 115200);
+  SerialBegin(Serial, 115200);
   rxReadEeprom();
   failsafeLoad();
   lrs_printf(Serial, "OpenLRSng RX starting ");
@@ -489,9 +489,9 @@ void setup()
   to_rx_mode();
 
   if ((bind_data.flags & TELEMETRY_MASK) == TELEMETRY_FRSKY) {
-    LRS_SerialBegin(Serial, 9600);
+    SerialBegin(Serial, 9600);
   } else {
-    LRS_SerialBegin(Serial, bind_data.serial_baudrate);
+    SerialBegin(Serial, bind_data.serial_baudrate);
   }
 
   while (lrs_inputPending(Serial)) {
