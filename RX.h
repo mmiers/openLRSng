@@ -494,8 +494,8 @@ void setup()
     SerialBegin(Serial, bind_data.serial_baudrate);
   }
 
-  while (lrs_inputPending(Serial)) {
-    lrs_getc(Serial);
+  while (SerialAvailable(Serial)) {
+    SerialRead(Serial);
   }
 
   serial_head = 0;
@@ -507,8 +507,8 @@ void setup()
 
 void checkSerial()
 {
-  while (lrs_inputPending(Serial) && (((serial_tail + 1) % SERIAL_BUFSIZE) != serial_head)) {
-    serial_buffer[serial_tail] = lrs_getc(Serial);
+  while (SerialAvailable(Serial) && (((serial_tail + 1) % SERIAL_BUFSIZE) != serial_head)) {
+    serial_buffer[serial_tail] = SerialRead(Serial);
     serial_tail = (serial_tail + 1) % SERIAL_BUFSIZE;
   }
 }
@@ -572,7 +572,7 @@ void loop()
           tx_buf[0] ^= 0x80; // signal that we got it
           for (i = 0; i <= (rx_buf[0] & 7);) {
             i++;
-            lrs_putc(Serial, rx_buf[i]);
+            SerialWrite(Serial, rx_buf[i]);
           }
         }
       }

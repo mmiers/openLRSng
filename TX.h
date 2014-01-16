@@ -100,8 +100,8 @@ void bindMode(void)
 
   init_rfm(1);
 
-  while (lrs_inputPending(Serial)) {
-    lrs_getc(Serial);    // flush serial
+  while (SerialAvailable(Serial)) {
+    SerialRead(Serial);    // flush serial
   }
 
   while (1) {
@@ -130,8 +130,8 @@ void bindMode(void)
       sendBinds = 1;
     }
 
-    while (lrs_inputPending(Serial)) {
-      switch (lrs_getc(Serial)) {
+    while (SerialAvailable(Serial)) {
+      switch (SerialRead(Serial)) {
       case '\n':
       case '\r':
         lrs_puts(Serial, "Enter menu...");
@@ -215,9 +215,9 @@ just_bind:
 
 void checkBND(void)
 {
-  if ((lrs_inputPending(Serial) > 3) &&
-      (lrs_getc(Serial) == 'B') && (lrs_getc(Serial) == 'N') &&
-      (lrs_getc(Serial) == 'D') && (lrs_getc(Serial) == '!')) {
+  if ((SerialAvailable(Serial) > 3) &&
+      (SerialRead(Serial) == 'B') && (SerialRead(Serial) == 'N') &&
+      (SerialRead(Serial) == 'D') && (SerialRead(Serial) == '!')) {
     buzzerOff();
     bindMode();
   }
@@ -318,8 +318,8 @@ void setup(void)
   digitalWrite(BTN, HIGH);
   Red_LED_ON ;
 
-  while (lrs_inputPending(Serial)) {
-    lrs_getc(Serial);
+  while (SerialAvailable(Serial)) {
+    SerialRead(Serial);
   }
 
   lrs_printf(Serial, "OpenLRSng TX starting ");
@@ -385,8 +385,8 @@ void loop(void)
     Red_LED_OFF;
   }
 
-  while (lrs_inputPending(TelemetrySerial) && (((serial_tail + 1) % SERIAL_BUFSIZE) != serial_head)) {
-    serial_buffer[serial_tail] = lrs_getc(TelemetrySerial);
+  while (SerialAvailable(TelemetrySerial) && (((serial_tail + 1) % SERIAL_BUFSIZE) != serial_head)) {
+    serial_buffer[serial_tail] = SerialRead(TelemetrySerial);
     serial_tail = (serial_tail + 1) % SERIAL_BUFSIZE;
   }
 
@@ -413,7 +413,7 @@ void loop(void)
           if (bind_data.flags & TELEMETRY_FRSKY) {
             frskyUserData(rx_buf[i]);
           } else {
-            lrs_putc(TelemetrySerial, rx_buf[i]);
+            SerialWrite(TelemetrySerial, rx_buf[i]);
           }
         }
       } else if ((rx_buf[0] & 0x3F) == 0) {
