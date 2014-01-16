@@ -53,8 +53,8 @@ public:
   };
 
   void read_packet() {
-    while (lrs_inputPending(Serial)) {
-      data = lrs_getc(Serial);
+    while (SerialAvailable(Serial)) {
+      data = SerialRead(Serial);
 
       switch (state) {
       case 0:
@@ -316,8 +316,8 @@ public:
   };
 
   void protocol_head(uint8_t code, uint16_t length) {
-    lrs_putc(Serial, PSP_SYNC1);
-    lrs_putc(Serial, PSP_SYNC2);
+    SerialWrite(Serial, PSP_SYNC1);
+    SerialWrite(Serial, PSP_SYNC2);
 
     crc = 0; // reset crc
 
@@ -326,11 +326,11 @@ public:
   };
 
   void protocol_tail() {
-    lrs_putc(Serial, crc);
+    SerialWrite(Serial, crc);
   };
 
   void serialize_uint8(uint8_t data) {
-    lrs_putc(Serial, data);
+    SerialWrite(Serial, data);
     crc ^= data;
   };
 
