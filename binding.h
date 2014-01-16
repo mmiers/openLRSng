@@ -23,29 +23,36 @@
 //  2 -- 19200bps, medium range
 #define DEFAULT_DATARATE 2
 
-#define DEFAULT_BAUDRATE 115200
+#define DEFAULT_BAUDRATE 57600
+#define DEFAULT_SERIAL_DOWNLINK 29
 
-// FLAGS: 8bits
+// FLAGS: 16bits
 
-#define TELEMETRY_OFF       0x00
-#define TELEMETRY_PASSTHRU  0x08
-#define TELEMETRY_FRSKY     0x10 // covers smartport if used with &
-#define TELEMETRY_SMARTPORT 0x18
-#define TELEMETRY_MASK      0x18
+#define TELEMETRY_OFF       0x0000
+#define TELEMETRY_PASSTHRU  0x0008
+#define TELEMETRY_FRSKY     0x0010 // covers smartport if used with &
+#define TELEMETRY_SMARTPORT 0x0018
+#define TELEMETRY_MASK      0x0018
 
-#define CHANNELS_4_4  0x01
-#define CHANNELS_8    0x02
-#define CHANNELS_8_4  0x03
-#define CHANNELS_12   0x04
-#define CHANNELS_12_4 0x05
-#define CHANNELS_16   0x06
+#define CHANNELS_4_4        0x0001
+#define CHANNELS_8          0x0002
+#define CHANNELS_8_4        0x0003
+#define CHANNELS_12         0x0004
+#define CHANNELS_12_4       0x0005
+#define CHANNELS_16         0x0006
 
-#define MUTE_TX       0x20 // do not beep on telemetry loss
+#define MUTE_TX             0x0020 // do not beep on telemetry loss
 
-#define INVERTED_PPMIN 0x40
-#define MICROPPM       0x80
+#define INVERTED_PPMIN      0x0040
+#define MICROPPM            0x0080
+
+#define MAVLINK_FRAMING     0x0100
+#define REVERSE_PPM_RSSI    0x0200
 
 #define DEFAULT_FLAGS (CHANNELS_8 | TELEMETRY_PASSTHRU)
+
+//####### MAVLink #######
+#define MAVLINK_INJECT_INTERVAL 100000
 
 // helper macro for European PMR channels
 #define EU_PMR_CH(x) (445993750L + 12500L * (x)) // valid for ch1-ch8
@@ -76,7 +83,7 @@
 #define EEPROM_FAILSAFE_OFFSET 0x180
 
 
-#define TELEMETRY_PACKETSIZE 9
+//#define TELEMETRY_PACKETSIZE 16
 
 #define BIND_MAGIC (0xDEC1BE15 + BINDING_VERSION)
 static uint8_t default_hop_list[] = {DEFAULT_HOPLIST};
@@ -104,13 +111,14 @@ static uint8_t default_hop_list[] = {DEFAULT_HOPLIST};
 struct bind_data {
   uint8_t version;
   uint32_t serial_baudrate;
+  uint8_t serial_downlink; // 0-63 max byte count for serial downlink
   uint32_t rf_frequency;
   uint32_t rf_magic;
   uint8_t rf_power;
   uint8_t rf_channel_spacing;
   uint8_t hopchannel[MAXHOPS];
   uint8_t modem_params;
-  uint8_t flags;
+  uint16_t flags;
 } bind_data;
 
 struct rfm22_modem_regs {
@@ -210,6 +218,7 @@ void bindInitDefaults(void)
 {
   bind_data.version = BINDING_VERSION;
   bind_data.serial_baudrate = DEFAULT_BAUDRATE;
+  bind_data.serial_downlink = DEFAULT_SERIAL_DOWNLINK;
   bind_data.rf_power = DEFAULT_RF_POWER;
   bind_data.rf_frequency = DEFAULT_CARRIER_FREQUENCY;
   bind_data.rf_channel_spacing = DEFAULT_CHANNEL_SPACING;

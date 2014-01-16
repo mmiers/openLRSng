@@ -69,12 +69,20 @@
 //### CODE SECTION ###
 //####################
 
+// Override the serial buffer sizes
+#ifdef COMPILE_TX
+#define SERIAL_BUFFER_SIZE 128
+#else
+#define SERIAL_BUFFER_SIZE 256
+#endif
+
 #include <Arduino.h>
 
 #include "version.h"
 #include "hardware.h"
 #include "binding.h"
 #include "common.h"
+#include "mavlink.h"
 
 #ifdef COMPILE_TX
 #include "binary_com.h"

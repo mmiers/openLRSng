@@ -311,8 +311,9 @@ void setupRfmInterrupt()
 #error Wrong board selected, select Arduino Pro/Pro Mini 5V/16MHz w/ ATMega328
 #endif
 
-#ifdef COMPILE_TX
 #define TelemetrySerial Serial
+
+#ifdef COMPILE_TX
 
 #define USE_ICP1 // use ICP1 for PPM input for less jitter
 
@@ -550,10 +551,10 @@ void setupRfmInterrupt()
 #error Wrong board selected, select Arduino Pro/Pro Mini 5V/16MHz w/ ATMega328
 #endif
 
+#define TelemetrySerial Serial
+
 #ifdef COMPILE_TX
 // TX operation
-
-#define TelemetrySerial Serial
 
 #define USE_ICP1 // use ICP1 for PPM input for less jitter
 #define PPM_IN 8 // ICP1

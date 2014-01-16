@@ -1,14 +1,14 @@
 /****************************************************
  * OpenLRSng receiver code
  ****************************************************/
-
-#include <avr/eeprom.h>
+uint16_t rxerrors = 0;
 
 uint8_t RF_channel = 0;
 
 uint32_t lastPacketTimeUs = 0;
 uint32_t lastRSSITimeUs = 0;
 uint32_t linkLossTimeMs;
+
 
 uint32_t lastBeaconTimeMs;
 
@@ -109,6 +109,18 @@ uint16_t RSSI2Bits(uint8_t rssi)
   return ret;
 }
 
+void set_PPM_RSSI_output()
+{
+  if (rx_config.RSSIpwm < 16) {
+    cli();
+    if (bind_data.flags & REVERSE_PPM_RSSI)
+      PPM[rx_config.RSSIpwm] = 1024 - RSSI2Bits(compositeRSSI);
+    else
+      PPM[rx_config.RSSIpwm] = RSSI2Bits(compositeRSSI);
+    sei();
+  }
+}
+
 void set_RSSI_output()
 {
   uint8_t linkq = countSetBits(linkQuality & 0x7fff);
@@ -119,11 +131,9 @@ void set_RSSI_output()
     // linkquality gives 0 to 14*13 == 182
     compositeRSSI = linkq * 13;
   }
-  if (rx_config.RSSIpwm < 16) {
-    cli();
-    PPM[rx_config.RSSIpwm] = RSSI2Bits(compositeRSSI);
-    sei();
-  }
+
+  set_PPM_RSSI_output();
+
   if (rx_config.pinMapping[RSSI_OUTPUT] == PINMAP_RSSI) {
     if ((compositeRSSI == 0) || (compositeRSSI == 255)) {
       TCCR2A &= ~(1 << COM2B1); // disable RSSI PWM output
@@ -394,16 +404,11 @@ uint8_t rx_buf[21]; // RX buffer (uplink)
 // type 0x00 normal servo, 0x01 failsafe set
 // type 0x38..0x3f uplinkked serial data
 
-uint8_t tx_buf[9]; // TX buffer (downlink)(type plus 8 x data)
+uint8_t tx_buf[64]; // TX buffer (downlink)(type plus 8 x data)
 // First byte is meta
 // MSB..LSB [1 bit uplink seq] [1bit downlink seqno] [6b telemtype]
 // 0x00 link info [RSSI] [AFCC]*2 etc...
 // type 0x38-0x3f downlink serial data 1-8 bytes
-
-#define SERIAL_BUFSIZE 32
-uint8_t serial_buffer[SERIAL_BUFSIZE];
-uint8_t serial_head;
-uint8_t serial_tail;
 
 uint8_t hopcount;
 
@@ -424,11 +429,12 @@ void setup()
   pinMode(1, OUTPUT);  // Serial Tx
 
   Serial.begin(115200);
+
   rxReadEeprom();
   failsafeLoad();
-  Serial.print("OpenLRSng RX starting ");
+  Serial.print(F("OpenLRSng RX starting "));
   printVersion(version);
-  Serial.print(" on HW ");
+  Serial.print(F(" on HW "));
   Serial.println(BOARD_TYPE);
 
   setupRfmInterrupt();
@@ -499,20 +505,9 @@ void setup()
   while (Serial.available()) {
     Serial.read();
   }
-
-  serial_head = 0;
-  serial_tail = 0;
   linkAcquired = 0;
   lastPacketTimeUs = micros();
 
-}
-
-void checkSerial()
-{
-  while (Serial.available() && (((serial_tail + 1) % SERIAL_BUFSIZE) != serial_head)) {
-    serial_buffer[serial_tail] = Serial.read();
-    serial_tail = (serial_tail + 1) % SERIAL_BUFSIZE;
-  }
 }
 
 //############ MAIN LOOP ##############
@@ -521,12 +516,10 @@ void loop()
   uint32_t timeUs, timeMs;
 
   if (spiReadRegister(0x0C) == 0) {     // detect the locked module and reboot
-    Serial.println("RX hang");
+    Serial.println(F("RX hang\n"));
     init_rfm(0);
     to_rx_mode();
   }
-
-  checkSerial();
 
   timeUs = micros();
 
@@ -553,10 +546,8 @@ void loop()
     if ((rx_buf[0] & 0x3e) == 0x00) {
       cli();
       unpackChannels(bind_data.flags & 7, PPM, rx_buf + 1);
-      if (rx_config.RSSIpwm < 16) {
-        PPM[rx_config.RSSIpwm] = RSSI2Bits(compositeRSSI);
-      }
-      sei();
+      set_PPM_RSSI_output(); // Override PPM from TX with RSSI value.
+	  sei();
       if (rx_buf[0] & 0x01) {
         if (!fs_saved) {
           failsafeSave();
@@ -574,7 +565,17 @@ void loop()
           tx_buf[0] ^= 0x80; // signal that we got it
           for (i = 0; i <= (rx_buf[0] & 7);) {
             i++;
-            Serial.write(rx_buf[i]);
+            const uint8_t ch = rx_buf[i];
+            Serial.write(ch);
+            if (bind_data.flags & MAVLINK_FRAMING) {
+              // Check mavlink frames of incoming serial stream before injection of mavlink radio status packet.
+              // Inject packet right after a completed packet
+              if (MAVLink_detectFrame(ch) && timeUs - last_mavlinkInject_time > MAVLINK_INJECT_INTERVAL) {
+                // Inject Mavlink radio modem status package.
+                MAVLink_report(0, compositeRSSI, rxerrors); // uint8_t RSSI_remote, uint16_t RSSI_local, uint16_t rxerrors)
+                last_mavlinkInject_time = timeUs;
+              }
+            }
           }
         }
       }
@@ -593,46 +594,54 @@ void loop()
       } else {
         tx_buf[0] &= 0xc0;
         tx_buf[0] ^= 0x40; // swap sequence as we have new data
-        if (serial_head != serial_tail) {
-          uint8_t bytes = 0;
-          while ((bytes < 8) && (serial_head != serial_tail)) {
-            bytes++;
-            tx_buf[bytes] = serial_buffer[serial_head];
-            serial_head = (serial_head + 1) % SERIAL_BUFSIZE;
-          }
-          tx_buf[0] |= (0x37 + bytes);
-        } else {
-          // tx_buf[0] lowest 6 bits left at 0
-          tx_buf[1] = lastRSSIvalue;
+        if (!(bind_data.flags & MAVLINK_FRAMING)) {
+          if (Serial.available()) {
+            uint8_t bytes = 0;
+            while ((bytes < 8) && Serial.available()) {
+              bytes++;
+              tx_buf[bytes] = Serial.read();
+            }
+            tx_buf[0] |= (0x37 + bytes);
+          } else {
+            // tx_buf[0] lowest 6 bits left at 0
+            tx_buf[1] = lastRSSIvalue;
 
-          if (rx_config.pinMapping[ANALOG0_OUTPUT] == PINMAP_ANALOG) {
-            tx_buf[2] = analogRead(OUTPUT_PIN[ANALOG0_OUTPUT]) >> 2;
+            if (rx_config.pinMapping[ANALOG0_OUTPUT] == PINMAP_ANALOG) {
+              tx_buf[2] = analogRead(OUTPUT_PIN[ANALOG0_OUTPUT]) >> 2;
 #ifdef ANALOG0_OUTPUT_ALT
-          } else if (rx_config.pinMapping[ANALOG0_OUTPUT_ALT] == PINMAP_ANALOG) {
-            tx_buf[2] = analogRead(OUTPUT_PIN[ANALOG0_OUTPUT_ALT]) >> 2;
+            } else if (rx_config.pinMapping[ANALOG0_OUTPUT_ALT] == PINMAP_ANALOG) {
+              tx_buf[2] = analogRead(OUTPUT_PIN[ANALOG0_OUTPUT_ALT]) >> 2;
 #endif
-          } else {
-            tx_buf[2] = 0;
-          }
+            } else {
+              tx_buf[2] = 0;
+            }
 
-          if (rx_config.pinMapping[ANALOG1_OUTPUT] == PINMAP_ANALOG) {
-            tx_buf[3] = analogRead(OUTPUT_PIN[ANALOG1_OUTPUT]) >> 2;
+            if (rx_config.pinMapping[ANALOG1_OUTPUT] == PINMAP_ANALOG) {
+              tx_buf[3] = analogRead(OUTPUT_PIN[ANALOG1_OUTPUT]) >> 2;
 #ifdef ANALOG1_OUTPUT_ALT
-          } else if (rx_config.pinMapping[ANALOG1_OUTPUT_ALT] == PINMAP_ANALOG) {
-            tx_buf[3] = analogRead(OUTPUT_PIN[ANALOG1_OUTPUT_ALT]) >> 2;
+            } else if (rx_config.pinMapping[ANALOG1_OUTPUT_ALT] == PINMAP_ANALOG) {
+              tx_buf[3] = analogRead(OUTPUT_PIN[ANALOG1_OUTPUT_ALT]) >> 2;
 #endif
-          } else {
-            tx_buf[3] = 0;
+            } else {
+              tx_buf[3] = 0;
+            }
+            tx_buf[4] = (lastAFCCvalue >> 8);
+            tx_buf[5] = lastAFCCvalue & 0xff;
+            tx_buf[6] = countSetBits(linkQuality & 0x7fff);
           }
-          tx_buf[4] = (lastAFCCvalue >> 8);
-          tx_buf[5] = lastAFCCvalue & 0xff;
-          tx_buf[6] = countSetBits(linkQuality & 0x7fff);
+        } else { // MAVlink data
+          uint8_t bytes = 0;
+          while ((bytes < bind_data.serial_downlink - 1) && Serial.available()) {
+            bytes++;
+            tx_buf[bytes] = Serial.read();
+            }
+          tx_buf[0] |= (0x3F & bytes);
         }
       }
-      tx_packet_async(tx_buf, 9);
+      tx_packet_async(tx_buf, bind_data.serial_downlink);
 
       while(!tx_done()) {
-        checkSerial();
+        // DO stuff while transmitting.
       }
     }
 
@@ -672,6 +681,7 @@ void loop()
       if (numberOfLostPackets == 0) {
         linkLossTimeMs = timeMs;
         lastBeaconTimeMs = 0;
+        rxerrors++;
       }
       numberOfLostPackets++;
       lastPacketTimeUs += getInterval(&bind_data);

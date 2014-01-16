@@ -25,7 +25,7 @@ BOARD_TYPE=3
 # You cannot currently compile TX as RX.
 # This flag controls what primary function the board will have
 #
-COMPILE_TX=1
+COMPILE_TX=0
 
 #
 # No real user options below here.
