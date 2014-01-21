@@ -117,7 +117,6 @@ ARDUINO_CORELIB_SRCS=WInterrupts.c wiring.c wiring_shift.c wiring_digital.c \
 		     wiring_pulse.c wiring_analog.c
 ARDUINO_CORELIB_OBJS= $(patsubst %.c, libraries/%.o, $(patsubst %.cpp, libraries/%.o, $(ARDUINO_CORELIB_SRCS)))
 
-
 #
 # Arduino stdc library files used, compilation settings.
 #

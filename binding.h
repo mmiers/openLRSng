@@ -228,7 +228,8 @@ void bindRandomize(void)
 {
   uint8_t c;
 
-  srandom(micros());
+  if (micros() != 0)
+    srandom(micros());
 
   bind_data.rf_magic = 0;
   for (c = 0; c < 4; c++) {
@@ -236,10 +237,8 @@ void bindRandomize(void)
   }
 
   for (c = 0; (c < MAXHOPS) && (bind_data.hopchannel[c] != 0); c++) {
-    uint8_t ch;
-
 again:
-    ch = (random() % 50) + 1;
+    uint8_t ch = (random() % 50) + 1;
 
     // don't allow same channel twice
     for (uint8_t i = 0; i < c; i++) {
