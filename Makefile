@@ -60,6 +60,7 @@ DEFINES=-DBOARD_TYPE=$(BOARD_TYPE) -DCOMPILE_TX
 else
 DEFINES=-DBOARD_TYPE=$(BOARD_TYPE)
 endif
+#DEFINES:=$(DEFINES) -DMALLOC_RING=1
 
 #
 # AVR GCC info
@@ -122,6 +123,7 @@ ARDUINO_CORELIB_OBJS= $(patsubst %.c, libraries/%.o, $(patsubst %.cpp, libraries
 #
 ARDUINO_LIBC_PATH=/usr/share/arduino/hardware/arduino/cores/arduino/avr-libc/
 ARDUINO_LIBC_SRCS=malloc.c realloc.c
+ARDUINO_LIBC_OBJS=#malloc.o realloc.o
 
 #
 # Master include path
@@ -131,7 +133,7 @@ INCLUDE=-I$(ARDUINO_CORELIB_PATH) -I$(ARDUINO_VARIANT_PATH) $(ARDUINO_LIB_INCL) 
 #
 # Target object files
 #
-OBJS=openLRSng.o printf.o serial.o $(ARDUINO_LIB_OBJS) libraries/libcore.a
+OBJS=openLRSng.o printf.o serial.o $(ARDUINO_LIB_OBJS) libraries/libcore.a $(ARDUINO_LIBC_OBJS)
 ifeq ($(BOARD_TYPE),6)
 OBJS:= $(OBJS) usbcore.o
 endif

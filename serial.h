@@ -48,6 +48,10 @@ extern "C"
 #include <avr/io.h>
 #include <avr/interrupt.h>
 
+#if !MALLOC_RING
+#define RING_SIZE    64 ///< Same size as Arduino
+#endif
+
 ///
 /// We only want to define interrupt handlers for serial ports that
 /// are actually used, so we force our users to define them using
@@ -68,7 +72,11 @@ typedef struct
   volatile uint16_t head, tail; ///< head and tail pointers
   volatile uint16_t overflow;   ///< Incremented every time the buffer can't fit a character.
   uint16_t          mask;       ///< buffer size mask for pointer wrap
+#if MALLOC_RING
   uint8_t           *bytes;     ///< pointer to allocated buffer
+#else
+  uint8_t           bytes[RING_SIZE]; ///< buffer
+#endif
 }
 SerialBuffer;
 
@@ -132,7 +140,11 @@ void SerialFreeBuffer(SerialBuffer *buffer);
 /// @note if we could bring the max size down to 256, the mask and head/tail
 ///       pointers in the buffer could become uint8_t.
 ///
+#if defined MALLOC_RING
 #define MAX_BUFFER_SIZE 512
+#else
+#define MAX_BUFFER_SIZE 128
+#endif
 
 //
 // LRS serial API

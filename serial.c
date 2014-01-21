@@ -446,7 +446,7 @@ size_t SerialWrite(SerialPort *ser, uint8_t c)
 bool SerialAllocBuffer(SerialBuffer *buffer, unsigned int size)
 {
   uint16_t  mask;
-  uint8_t    shift;
+  uint8_t   shift;
 
   // init buffer state
   buffer->head = buffer->tail = 0;
@@ -468,13 +468,17 @@ bool SerialAllocBuffer(SerialBuffer *buffer, unsigned int size)
     if (buffer->mask == mask)
       return true;
 
+#if MALLOC_RING
     // Dispose of the old buffer.
     free(buffer->bytes);
+#endif
   }
   buffer->mask = mask;
 
+#if MALLOC_RING
   // allocate memory for the buffer - if this fails, we fail.
   buffer->bytes = (uint8_t *)malloc(buffer->mask + 1);
+#endif
 
   return (buffer->bytes != NULL);
 }
@@ -483,8 +487,10 @@ void SerialFreeBuffer(SerialBuffer *buffer)
 {
   buffer->head = buffer->tail = 0;
   buffer->mask = 0;
+#if MALLOC_RING
   if (NULL != buffer->bytes) {
     free(buffer->bytes);
     buffer->bytes = NULL;
   }
+#endif
 }
