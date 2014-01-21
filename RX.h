@@ -488,7 +488,9 @@ void setup()
   RF_Mode = Receive;
   to_rx_mode();
 
-  if ((bind_data.flags & TELEMETRY_MASK) == TELEMETRY_FRSKY) {
+  if (rx_config.pinMapping[TXD_OUTPUT] == PINMAP_SPKTRM) {
+    SerialBegin(Serial, 115200);
+  } else if ((bind_data.flags & TELEMETRY_MASK) == TELEMETRY_FRSKY) {
     SerialBegin(Serial, 9600);
   } else {
     SerialBegin(Serial, bind_data.serial_baudrate);
@@ -570,9 +572,11 @@ void loop()
           // We got new data... (not retransmission)
           uint8_t i;
           tx_buf[0] ^= 0x80; // signal that we got it
-          for (i = 0; i <= (rx_buf[0] & 7);) {
-            i++;
-            SerialWrite(Serial, rx_buf[i]);
+          if (rx_config.pinMapping[TXD_OUTPUT] != PINMAP_SPKTRM) {
+            for (i = 0; i <= (rx_buf[0] & 7);) {
+              i++;
+              SerialWrite(Serial, rx_buf[i]);
+            }
           }
         }
       }
@@ -714,6 +718,10 @@ void loop()
       lastPacketTimeUs = timeUs;
       willhop = 1;
     }
+  }
+
+  if ((rx_config.pinMapping[TXD_OUTPUT] == PINMAP_SPKTRM) && (!disablePPM)) {
+    sendSpektrumFrame();
   }
 
   if (willhop == 1) {
