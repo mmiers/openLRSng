@@ -496,7 +496,9 @@ void setup()
   RF_Mode = Receive;
   to_rx_mode();
 
-  if ((bind_data.flags & TELEMETRY_MASK) == TELEMETRY_FRSKY) {
+  if (rx_config.pinMapping[TXD_OUTPUT] == PINMAP_SPKTRM) {
+    Serial.begin(115200);
+  } else if ((bind_data.flags & TELEMETRY_MASK) == TELEMETRY_FRSKY) {
     Serial.begin(9600);
   } else {
     Serial.begin(bind_data.serial_baudrate);
@@ -563,17 +565,19 @@ void loop()
           // We got new data... (not retransmission)
           uint8_t i;
           tx_buf[0] ^= 0x80; // signal that we got it
-          for (i = 0; i <= (rx_buf[0] & 7);) {
-            i++;
-            const uint8_t ch = rx_buf[i];
-            Serial.write(ch);
-            if (bind_data.flags & MAVLINK_FRAMING) {
-              // Check mavlink frames of incoming serial stream before injection of mavlink radio status packet.
-              // Inject packet right after a completed packet
-              if (MAVLink_detectFrame(ch) && timeUs - last_mavlinkInject_time > MAVLINK_INJECT_INTERVAL) {
-                // Inject Mavlink radio modem status package.
-                MAVLink_report(0, compositeRSSI, rxerrors); // uint8_t RSSI_remote, uint16_t RSSI_local, uint16_t rxerrors)
-                last_mavlinkInject_time = timeUs;
+          if (rx_config.pinMapping[TXD_OUTPUT] != PINMAP_SPKTRM) {
+            for (i = 0; i <= (rx_buf[0] & 7);) {
+              i++;
+              const uint8_t ch = rx_buf[i];
+              Serial.write(ch);
+              if (bind_data.flags & MAVLINK_FRAMING) {
+                // Check mavlink frames of incoming serial stream before injection of mavlink radio status packet.
+                // Inject packet right after a completed packet
+                if (MAVLink_detectFrame(ch) && timeUs - last_mavlinkInject_time > MAVLINK_INJECT_INTERVAL) {
+                  // Inject Mavlink radio modem status package.
+                  MAVLink_report(0, compositeRSSI, rxerrors); // uint8_t RSSI_remote, uint16_t RSSI_local, uint16_t rxerrors)
+                  last_mavlinkInject_time = timeUs;
+                }
               }
             }
           }
@@ -726,6 +730,10 @@ void loop()
       lastPacketTimeUs = timeUs;
       willhop = 1;
     }
+  }
+
+  if ((rx_config.pinMapping[TXD_OUTPUT] == PINMAP_SPKTRM) && (!disablePPM)) {
+    sendSpektrumFrame();
   }
 
   if (willhop == 1) {
