@@ -204,7 +204,6 @@ void checkButton(void)
         }
         return;
       }
-      randomSeed(micros()); // button release time in us should give us enough seed
       bindRandomize();
       bindWriteEeprom();
       bindPrint();
@@ -263,8 +262,11 @@ void checkFS(void)
 uint8_t tx_buf[21];
 uint8_t rx_buf[64];
 
-
+#define SERIAL_BUFSIZE 32
+uint8_t serial_buffer[SERIAL_BUFSIZE];
 uint8_t serial_resend[64];
+uint8_t serial_head;
+uint8_t serial_tail;
 uint8_t serial_okToSend; // 2 if it is ok to send serial instead of servo
 
 void setup(void)
@@ -316,9 +318,13 @@ void setup(void)
   digitalWrite(BTN, HIGH);
   Red_LED_ON ;
 
-  Serial.print(F("OpenLRSng TX starting "));
+  while (Serial.available()) {
+    Serial.read();
+  }
+
+  Serial.print("OpenLRSng TX starting ");
   printVersion(version);
-  Serial.print(F(" on HW "));
+  Serial.print(" on HW ");
   Serial.println(BOARD_TYPE);
 
   delay(200);
@@ -338,6 +344,8 @@ void setup(void)
   rfmSetChannel(RF_channel);
   rx_reset();
 
+  serial_head = 0;
+  serial_tail = 0;
   serial_okToSend = 0;
 
   delay(300);
@@ -353,6 +361,8 @@ void setup(void)
 
   if (bind_data.flags & TELEMETRY_FRSKY) {
     frskyInit((bind_data.flags & TELEMETRY_MASK) == TELEMETRY_SMARTPORT);
+  } else if (bind_data.flags & TELEMETRY_MASK) {
+    // ?
   }
 }
 
@@ -370,17 +380,21 @@ uint8_t compositeRSSI(uint8_t rssi, uint8_t linkq)
 void loop(void)
 {
   if (spiReadRegister(0x0C) == 0) {     // detect the locked module and reboot
-    Serial.println(F("module locked?"));
+    Serial.println("module locked?");
     Red_LED_ON;
     init_rfm(0);
     rx_reset();
     Red_LED_OFF;
   }
 
+  while (TelemetrySerial.available() && (((serial_tail + 1) % SERIAL_BUFSIZE) != serial_head)) {
+    serial_buffer[serial_tail] = TelemetrySerial.read();
+    serial_tail = (serial_tail + 1) % SERIAL_BUFSIZE;
+  }
+
   if (RF_Mode == Received) {
-    const uint32_t time = micros();
     // got telemetry packet
-    lastTelemetry = time;
+    lastTelemetry = micros();
     if (!lastTelemetry) {
       lastTelemetry = 1; //fixup rare case of zero
     }
@@ -410,6 +424,12 @@ void loop(void)
           RSSI_rx = rx_buf[1];
           RX_ain0 = rx_buf[2];
           RX_ain1 = rx_buf[3];
+#ifdef TEST_DUMP_AFCC
+#define SIGNIT(x) ((int16_t)(((x&0x200)?0xFC00U:0)|(x&0x3FF)))
+          Serial.print(SIGNIT(rfmGetAFCC()));
+          Serial.print(':');
+          Serial.println(SIGNIT((rx_buf[4] << 8) + rx_buf[5]));
+#endif
           linkQualityRX = rx_buf[6];
         }
       } else {
@@ -421,10 +441,10 @@ void loop(void)
             // Inject packet right after a completed packet
             const uint8_t ch = rx_buf[i];
             TelemetrySerial.write(ch);
-            if (MAVLink_detectFrame(ch) && time - last_mavlinkInject_time > MAVLINK_INJECT_INTERVAL) {
+            if (MAVLink_detectFrame(ch) && lastTelemetry - last_mavlinkInject_time > MAVLINK_INJECT_INTERVAL) {
               // Inject Mavlink radio modem status package.
               MAVLink_report(0, RSSI_tx, rxerrors); // uint8_t RSSI_remote, uint16_t RSSI_local, uint16_t rxerrors)
-              last_mavlinkInject_time = time;
+              last_mavlinkInject_time = lastTelemetry;
             }
           }
         }
@@ -467,18 +487,18 @@ void loop(void)
 
       // Construct packet to be sent
       tx_buf[0] &= 0xc0; //preserve seq. bits
-      if (TelemetrySerial.available() && (serial_okToSend == 2)) {
+      if ((serial_tail != serial_head) && (serial_okToSend == 2)) {
         tx_buf[0] ^= 0x80; // signal new data on line
         uint8_t bytes = 0;
         uint8_t maxbytes = 8;
         if (getPacketSize(&bind_data) < 9) {
           maxbytes = getPacketSize(&bind_data) - 1;
         }
-        while ((bytes < maxbytes) && TelemetrySerial.available()) {
+        while ((bytes < maxbytes) && (serial_head != serial_tail)) {
           bytes++;
-          uint8_t readByte = TelemetrySerial.read();
-          tx_buf[bytes] = readByte;
-          serial_resend[bytes] = readByte;
+          tx_buf[bytes] = serial_buffer[serial_head];
+          serial_resend[bytes] = serial_buffer[serial_head];
+          serial_head = (serial_head + 1) % SERIAL_BUFSIZE;
         }
         tx_buf[0] |= (0x37 + bytes);
         serial_resend[0] = bytes;

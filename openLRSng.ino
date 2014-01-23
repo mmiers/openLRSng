@@ -90,6 +90,7 @@
 #include "frskytx.h"
 #include "TX.h"
 #else // COMPILE_RX
+#include "I2C.h"
 #include "spektrum.h"
 #include "RX.h"
 #endif

@@ -25,7 +25,7 @@ BOARD_TYPE=3
 # You cannot currently compile TX as RX.
 # This flag controls what primary function the board will have
 #
-COMPILE_TX=0
+COMPILE_TX=1
 
 #
 # No real user options below here.
@@ -115,8 +115,8 @@ ARDUINO_VARIANT_PATH=$(ARDUINO_PATH)/hardware/arduino/variants/$(VARIANT)
 ARDUINO_CORELIB_PATH=$(ARDUINO_PATH)/hardware/arduino/cores/arduino/
 ARDUINO_CORELIB_SRCS=WInterrupts.c wiring.c wiring_shift.c wiring_digital.c \
 		     wiring_pulse.c wiring_analog.c \
-		     CDC.cpp Print.cpp HardwareSerial.cpp WString.cpp IPAddress.cpp \
-		     Stream.cpp main.cpp USBCore.cpp HID.cpp new.cpp Tone.cpp WMath.cpp
+		     CDC.cpp Print.cpp HardwareSerial.cpp WString.cpp \
+		     Stream.cpp main.cpp USBCore.cpp HID.cpp
 ARDUINO_CORELIB_OBJS= $(patsubst %.c, libraries/%.o, $(patsubst %.cpp, libraries/%.o, $(ARDUINO_CORELIB_SRCS)))
 
 
@@ -156,7 +156,7 @@ define cxx-command
 	$(CXX) -c $(COPTFLAGS) $(CXXFLAGS) $(CFLAGS) $(INCLUDE) -o $@ $<
 endef
 
-.PHONY: all clean upload
+.PHONY: all clean upload astyle 433 868 915 allfw
 
 %.o: %.ino
 	$(ino-command)
@@ -194,7 +194,7 @@ libraries/libcore.a: $(ARDUINO_CORELIB_OBJS)
 astyle:
 	$(ASTYLE) $(ASTYLEOPTIONS) openLRSng.ino *.h
 
-fw:
+433:
 	mkdir -p out
 	rm -f out/*.hex
 	make COMPILE_TX= BOARD_TYPE=3 clean all && cp openLRSng.hex out/RX-3.hex
@@ -206,21 +206,30 @@ fw:
 	make COMPILE_TX=1 BOARD_TYPE=6 clean all && cp openLRSng.hex out/TX-6.hex
 	ls -l out
 
-allfw:  fw
-	make RFMXX_868=1 COMPILE_TX= BOARD_TYPE=3 clean all && cp openLRSng.hex out/RX868-3.hex
-	make RFMXX_868=1 COMPILE_TX= BOARD_TYPE=5 clean all && cp openLRSng.hex out/RX868-5.hex
-	make RFMXX_868=1 COMPILE_TX=1 BOARD_TYPE=2 clean all && cp openLRSng.hex out/TX868-2.hex
-	make RFMXX_868=1 COMPILE_TX=1 BOARD_TYPE=3 clean all && cp openLRSng.hex out/TX868-3.hex
-	make RFMXX_868=1 COMPILE_TX=1 BOARD_TYPE=4 clean all && cp openLRSng.hex out/TX868-4.hex
-	make RFMXX_868=1 COMPILE_TX=1 BOARD_TYPE=5 clean all && cp openLRSng.hex out/TX868-5.hex
-	make RFMXX_868=1 COMPILE_TX=1 BOARD_TYPE=6 clean all && cp openLRSng.hex out/TX868-6.hex
+868:
+	mkdir -p out/868
+	rm -f out/868/*.hex
+	make RFMXX_868=1 COMPILE_TX= BOARD_TYPE=3 clean all && cp openLRSng.hex out/868/RX-3.hex
+	make RFMXX_868=1 COMPILE_TX= BOARD_TYPE=5 clean all && cp openLRSng.hex out/868/RX-5.hex
+	make RFMXX_868=1 COMPILE_TX=1 BOARD_TYPE=2 clean all && cp openLRSng.hex out/868/TX-2.hex
+	make RFMXX_868=1 COMPILE_TX=1 BOARD_TYPE=3 clean all && cp openLRSng.hex out/868/TX-3.hex
+	make RFMXX_868=1 COMPILE_TX=1 BOARD_TYPE=4 clean all && cp openLRSng.hex out/868/TX-4.hex
+	make RFMXX_868=1 COMPILE_TX=1 BOARD_TYPE=5 clean all && cp openLRSng.hex out/868/TX-5.hex
+	make RFMXX_868=1 COMPILE_TX=1 BOARD_TYPE=6 clean all && cp openLRSng.hex out/868/TX-6.hex
+	ls -l out/868
 
-	make RFMXX_915=1 COMPILE_TX= BOARD_TYPE=3 clean all && cp openLRSng.hex out/RX915-3.hex
-	make RFMXX_915=1 COMPILE_TX= BOARD_TYPE=5 clean all && cp openLRSng.hex out/RX915-5.hex
-	make RFMXX_915=1 COMPILE_TX=1 BOARD_TYPE=2 clean all && cp openLRSng.hex out/TX915-2.hex
-	make RFMXX_915=1 COMPILE_TX=1 BOARD_TYPE=3 clean all && cp openLRSng.hex out/TX915-3.hex
-	make RFMXX_915=1 COMPILE_TX=1 BOARD_TYPE=4 clean all && cp openLRSng.hex out/TX915-4.hex
-	make RFMXX_915=1 COMPILE_TX=1 BOARD_TYPE=5 clean all && cp openLRSng.hex out/TX915-5.hex
-	make RFMXX_915=1 COMPILE_TX=1 BOARD_TYPE=6 clean all && cp openLRSng.hex out/TX915-6.hex
-	ls -l out
+915:
+	mkdir -p out/915
+	rm -f out/915/*.hex
+	make RFMXX_915=1 COMPILE_TX= BOARD_TYPE=3 clean all && cp openLRSng.hex out/915/RX-3.hex
+	make RFMXX_915=1 COMPILE_TX= BOARD_TYPE=5 clean all && cp openLRSng.hex out/915/RX-5.hex
+	make RFMXX_915=1 COMPILE_TX=1 BOARD_TYPE=2 clean all && cp openLRSng.hex out/915/TX-2.hex
+	make RFMXX_915=1 COMPILE_TX=1 BOARD_TYPE=3 clean all && cp openLRSng.hex out/915/TX-3.hex
+	make RFMXX_915=1 COMPILE_TX=1 BOARD_TYPE=4 clean all && cp openLRSng.hex out/915/TX-4.hex
+	make RFMXX_915=1 COMPILE_TX=1 BOARD_TYPE=5 clean all && cp openLRSng.hex out/915/TX-5.hex
+	make RFMXX_915=1 COMPILE_TX=1 BOARD_TYPE=6 clean all && cp openLRSng.hex out/915/TX-6.hex
+	ls -l out/868
+
+allfw:  433 868 915
+	ls -lR out
 
