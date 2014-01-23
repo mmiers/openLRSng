@@ -69,7 +69,61 @@
 //### CODE SECTION ###
 //####################
 
+#if !defined(C_BUILD)
+
 #include <Arduino.h>
+
+#include <avr/eeprom.h>
+
+#else
+
+#include <stdlib.h>
+#include <stdint.h>
+#include <stdbool.h>
+
+#include <string.h>
+#include <math.h>
+
+#include <avr/interrupt.h>
+#include <avr/pgmspace.h>
+#include <avr/eeprom.h>
+
+/*
+ * Arduino legacy APIs and defines
+ */
+#define HIGH         0x1
+#define LOW          0x0
+
+#define INPUT        0x0
+#define OUTPUT       0x1
+#define INPUT_PULLUP 0x2
+
+#define CHANGE       1
+#define FALLING      2
+#define RISING       3
+
+/*
+ * Arduino APIs
+ */
+// wiring.c
+unsigned long millis();
+unsigned long micros();
+void delay(unsigned long ms);
+void delayMicroseconds(unsigned int us);
+
+// wiring_digital.c
+void pinMode(uint8_t pin, uint8_t mode);
+void digitalWrite(uint8_t pin, uint8_t val);
+int digitalRead(uint8_t pin);
+
+// wiring_analog.c
+int analogRead(uint8_t pin);
+void analogWrite(uint8_t pin, int val);
+
+// WInterrupts.c
+void attachInterrupt(uint8_t interruptNum, void (*userFunc)(void), int mode);
+
+#endif
 
 #include "version.h"
 #include "hardware.h"

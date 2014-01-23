@@ -1,5 +1,6 @@
+
 #include <util/twi.h>
-#include <Arduino.h>
+
 #define I2C_FREQ 400000
 
 
