@@ -201,8 +201,6 @@ void checkButton(void)
         }
         return;
       }
-      if (micros() != 0)
-        srandom(micros()); // button release time in us should give us enough seed
       bindRandomize();
       bindWriteEeprom();
       bindPrint();
@@ -421,6 +419,12 @@ void loop(void)
         RSSI_rx = rx_buf[1];
         RX_ain0 = rx_buf[2];
         RX_ain1 = rx_buf[3];
+#ifdef TEST_DUMP_AFCC
+#define SIGNIT(x) ((int16_t)(((x&0x200)?0xFC00U:0)|(x&0x3FF)))
+        Serial.print(SIGNIT(rfmGetAFCC()));
+        Serial.print(':');
+        Serial.println(SIGNIT((rx_buf[4] << 8) + rx_buf[5]));
+#endif
         linkQualityRX = rx_buf[6];
       }
     }
