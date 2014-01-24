@@ -138,5 +138,6 @@ void attachInterrupt(uint8_t interruptNum, void (*userFunc)(void), int mode);
 #else // COMPILE_RX
 #include "I2C.h"
 #include "spektrum.h"
+#include "sbus.h"
 #include "RX.h"
 #endif
