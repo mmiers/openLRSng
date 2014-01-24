@@ -99,12 +99,6 @@
 
 #include "cpu.h"
 
-/*
- * This really needs to go, but it changes
- * the object comparison.
- */
-typedef uint8_t boolean;
-
 #if defined(__cplusplus)
 extern "C"
 {
@@ -162,8 +156,6 @@ void attachInterrupt(uint8_t interruptNum, void (*userFunc)(void), int mode);
 #include "RX.h"
 #endif
 
-#if defined(NOT_YET)
-
 #if defined(__cplusplus)
 extern "C"
 {
@@ -191,7 +183,5 @@ int main(void)
 
 #if defined(__cplusplus)
 }
-#endif
-
 #endif
 

@@ -36,7 +36,7 @@ uint8_t numberOfLostPackets = 0;
 volatile uint8_t slaveState = 0; // 0 - no slave, 1 - slave initializing, 2 - slave running, 3- errored
 uint32_t slaveFailedMs = 0;
 
-boolean willhop = 0, fs_saved = 0;
+bool willhop = 0, fs_saved = 0;
 
 pinMask_t chToMask[PPM_CHANNELS];
 pinMask_t clearMask;

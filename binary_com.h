@@ -5,7 +5,7 @@
     [SYNC1][SYNC2][CODE][LENGTH_L][LENGTH_H][DATA/DATA ARRAY][CRC]
 */
 
-boolean binary_mode_active = false;
+bool binary_mode_active = false;
 
 #define PSP_SYNC1 0xB5
 #define PSP_SYNC2 0x62

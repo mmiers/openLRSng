@@ -114,7 +114,7 @@ ARDUINO_VARIANT_PATH=$(ARDUINO_PATH)/hardware/arduino/variants/$(VARIANT)
 ARDUINO_CORELIB_PATH=$(ARDUINO_PATH)/hardware/arduino/cores/arduino/
 ARDUINO_CORELIB_SRCS=WInterrupts.c wiring.c wiring_digital.c wiring_analog.c \
 		     CDC.cpp Print.cpp HardwareSerial.cpp WString.cpp \
-		     Stream.cpp main.cpp USBCore.cpp HID.cpp
+		     Stream.cpp USBCore.cpp HID.cpp
 ARDUINO_CORELIB_OBJS= $(patsubst %.c, libraries/%.o, $(patsubst %.cpp, libraries/%.o, $(ARDUINO_CORELIB_SRCS)))
 
 
