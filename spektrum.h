@@ -12,9 +12,10 @@ void sendSpektrumFrame()
     spektrumLast = now;
     SerialWrite(Serial, SPKTRM_SYNC1);
     SerialWrite(Serial, SPKTRM_SYNC2);
-    for (uint8_t ch = 0; ch < 7; ch++) {
+    for (uint8_t i = 0; i < 7; i++) {
       SerialWrite(Serial, (ch << 2) | ((PPM[ch] >> 8) & 0x03));
       SerialWrite(Serial, PPM[ch] & 0xff);
+      ch++;
     }
   }
 }
