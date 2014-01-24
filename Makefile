@@ -55,10 +55,9 @@ endif
 #
 # C preprocessor defines
 #
-ifeq ($(COMPILE_TX),1)
-DEFINES=-DBOARD_TYPE=$(BOARD_TYPE) -DCOMPILE_TX
-else
 DEFINES=-DBOARD_TYPE=$(BOARD_TYPE)
+ifeq ($(COMPILE_TX),1)
+DEFINES:=$(DEFINES) -DCOMPILE_TX
 endif
 
 #
@@ -113,8 +112,7 @@ ARDUINO_VARIANT_PATH=$(ARDUINO_PATH)/hardware/arduino/variants/$(VARIANT)
 # Arduino library files used, compilation settings.
 #
 ARDUINO_CORELIB_PATH=$(ARDUINO_PATH)/hardware/arduino/cores/arduino/
-ARDUINO_CORELIB_SRCS=WInterrupts.c wiring.c wiring_shift.c wiring_digital.c \
-		     wiring_pulse.c wiring_analog.c \
+ARDUINO_CORELIB_SRCS=WInterrupts.c wiring.c wiring_digital.c wiring_analog.c \
 		     CDC.cpp Print.cpp HardwareSerial.cpp WString.cpp \
 		     Stream.cpp main.cpp USBCore.cpp HID.cpp
 ARDUINO_CORELIB_OBJS= $(patsubst %.c, libraries/%.o, $(patsubst %.cpp, libraries/%.o, $(ARDUINO_CORELIB_SRCS)))

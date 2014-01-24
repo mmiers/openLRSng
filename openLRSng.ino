@@ -69,14 +69,6 @@
 //### CODE SECTION ###
 //####################
 
-#if !defined(C_BUILD)
-
-#include <Arduino.h>
-
-#include <avr/eeprom.h>
-
-#else
-
 #include <stdlib.h>
 #include <stdint.h>
 #include <stdbool.h>
@@ -102,9 +94,29 @@
 #define FALLING      2
 #define RISING       3
 
+#define lowByte(w) ((uint8_t) ((w) & 0xff))
+#define highByte(w) ((uint8_t) ((w) >> 8))
+
+#include "cpu.h"
+
+/*
+ * This really needs to go, but it changes
+ * the object comparison.
+ */
+typedef uint8_t boolean;
+
+#if defined(__cplusplus)
+extern "C"
+{
+#endif
+
 /*
  * Arduino APIs
  */
+// main.cpp
+void setup();
+void loop();
+
 // wiring.c
 unsigned long millis();
 unsigned long micros();
@@ -123,7 +135,15 @@ void analogWrite(uint8_t pin, int val);
 // WInterrupts.c
 void attachInterrupt(uint8_t interruptNum, void (*userFunc)(void), int mode);
 
+#if defined(__cplusplus)
+}
 #endif
+
+//
+// Legacy Arduino C++
+// Serial
+//
+#include "HardwareSerial.h"
 
 #include "version.h"
 #include "hardware.h"
@@ -141,3 +161,37 @@ void attachInterrupt(uint8_t interruptNum, void (*userFunc)(void), int mode);
 #include "sbus.h"
 #include "RX.h"
 #endif
+
+#if defined(NOT_YET)
+
+#if defined(__cplusplus)
+extern "C"
+{
+#endif
+
+extern void init();
+
+int main(void)
+{
+  init();
+
+#if defined(USBCON)
+  USBDevice.attach();
+#endif
+	
+  setup();
+    
+  for (;;) {
+    loop();
+    if (serialEventRun) serialEventRun();
+  }
+
+  return 0;
+}
+
+#if defined(__cplusplus)
+}
+#endif
+
+#endif
+
