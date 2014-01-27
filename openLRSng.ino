@@ -163,14 +163,14 @@ SerialPort(port0, 0);
 #include "RX.h"
 #endif
 
-extern "C" void USBDevice_Attach();
-
 #if defined(__cplusplus)
 extern "C"
 {
 #endif
 
 extern void init();
+
+extern void USBDevice_Attach();
 
 int main(void)
 {

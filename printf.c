@@ -1,5 +1,5 @@
 /*
- * notify.c
+ * printf.c
  *
  * printf() style routine for openLRSng
  */
@@ -19,7 +19,7 @@ SerialPort *stdOut;
 
 static size_t
 print_string(size_t (*pr_putc)(void *data, char ch), void *data,
-             uint8_t flags, uint8_t w, char *p)
+             uint8_t flags, int8_t w, char *p)
 {
   size_t ret = 1;
 
@@ -60,7 +60,7 @@ print_number(size_t (*pr_putc)(void *data, char ch), void *data,
   return print_string(pr_putc, data, flags, w, str);
 }
 
-void
+static void
 format_output(size_t (*pr_putc)(void *data, char ch),
               void *data, const char *fmt, va_list va)
 {
@@ -199,8 +199,26 @@ do_printf(const char *fmt, ...)
 void
 do_puts(const char *str)
 {
-    do_printf(str);
-    SerialWrite(stdOut, '\r');
-    SerialWrite(stdOut, '\n');
+  do_printf(str);
+  SerialWrite(stdOut, '\r');
+  SerialWrite(stdOut, '\n');
+}
+
+size_t
+do_putc(char ch)
+{
+  return SerialWrite(stdOut, ch);
+}
+
+int
+do_getc()
+{
+  return SerialRead(stdOut);
+}
+
+int
+do_inputPending()
+{
+  return SerialAvailable(stdIn);
 }
 

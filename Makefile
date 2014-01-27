@@ -18,7 +18,7 @@ ARDUINO_PATH=/usr/share/arduino
 # 5 - DTF 4ch RX
 # 6 - Deluxe TX
 #
-BOARD_TYPE=2
+BOARD_TYPE=3
 
 #
 # You can compile all TX as TX, and all RX as either RX or TX.
@@ -59,7 +59,6 @@ DEFINES=-DBOARD_TYPE=$(BOARD_TYPE)
 ifeq ($(COMPILE_TX),1)
 DEFINES:=$(DEFINES) -DCOMPILE_TX
 endif
-#DEFINES:=$(DEFINES) -DMALLOC_RING=1
 
 #
 # AVR GCC info
@@ -121,7 +120,6 @@ ARDUINO_CORELIB_OBJS= $(patsubst %.c, libraries/%.o, $(patsubst %.cpp, libraries
 #
 ARDUINO_LIBC_PATH=/usr/share/arduino/hardware/arduino/cores/arduino/avr-libc/
 ARDUINO_LIBC_SRCS=malloc.c realloc.c
-ARDUINO_LIBC_OBJS=#malloc.o realloc.o
 
 #
 # Master include path
@@ -150,7 +148,7 @@ define ino-command
 	$(CXX) -c $(COPTFLAGS) $(CXXFLAGS) $(CFLAGS) $(INCLUDE) -o $@ -x c++ $<
 endef
 define cc-command
-	$(CC)  -c $(COPTFLAGS) $(CFLAGS) $(INCLUDE) -o $@ $<
+	$(CC) -c $(COPTFLAGS) $(CFLAGS) $(INCLUDE) -o $@ $<
 endef
 define cxx-command
 	$(CXX) -c $(COPTFLAGS) $(CXXFLAGS) $(CFLAGS) $(INCLUDE) -o $@ $<
@@ -181,10 +179,10 @@ clean:
 
 openLRSng.hex: $(OBJS)
 	$(CC) -Os -Wl,--gc-sections -mmcu=$(CPU) -o openLRSng.elf $(OBJS) -Llibraries -lm 
-	$(OBJCOPY) -O ihex -j .eeprom --set-section-flags=.eeprom=alloc,load \
+	@$(OBJCOPY) -O ihex -j .eeprom --set-section-flags=.eeprom=alloc,load \
 		--no-change-warnings --change-section-lma .eeprom=0 \
 		openLRSng.elf openLRSng.eep 
-	$(OBJCOPY) -O ihex -R .eeprom openLRSng.elf openLRSng.hex 
+	@$(OBJCOPY) -O ihex -R .eeprom openLRSng.elf openLRSng.hex 
 	@echo "NOTE: Deployment size is text + data."
 	@$(SIZE) openLRSng.elf
 

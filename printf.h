@@ -26,6 +26,10 @@ extern void do_sprintf(char *buf, const char *format, ...) __attribute__ ((forma
 extern void do_printf(const char *format, ...) __attribute__ ((format (printf, 1, 2)));
 extern void do_puts(const char *str);
 
+extern size_t do_putc(char ch);
+extern int    do_getc(void);
+extern int    do_inputPending(void);
+
 /*
  * printf() style macro, forces string constant to be in PROGMEM.
  */
@@ -34,9 +38,9 @@ extern void do_puts(const char *str);
 #define lrs_printf(__x, ...)               do_printf(PSTR(__x), ##__VA_ARGS__)
 #define lrs_puts(__p)                      do_puts(PSTR(__p))
 
-#define lrs_putc(__c)                      SerialWrite(stdOut, __c)
-#define lrs_getc()                         SerialRead(stdOut)
-#define lrs_inputPending(__s)              SerialAvailable(stdIn)
+#define lrs_putc(__c)                      do_putc(__c)
+#define lrs_getc()                         do_getc()
+#define lrs_inputPending(__s)              do_inputPending()
 
 #ifdef __cplusplus
 } // extern "C"
