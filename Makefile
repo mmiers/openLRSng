@@ -94,42 +94,14 @@ CFLAGS=-Wall -ffunction-sections -fdata-sections -mmcu=$(CPU) -DF_CPU=$(CLOCK) -
 CXXFLAGS=-fno-exceptions
 
 #
-# Arduino libraries used, compilation settings.
-#
-ARDUINO_LIBS=
-ARDUINO_LIB_PATH=$(ARDUINO_PATH)/libraries/
-ARDUINO_LIB_DIRS=$(addprefix $(ARDUINO_LIB_PATH),$(ARDUINO_LIBS))
-ARDUINO_LIB_INCL=$(addsuffix $(ARDUINO_LIBS),-I$(ARDUINO_LIB_PATH))
-ARDUINO_LIB_SRCS=$(addsuffix .cpp,$(addprefix $(ARDUINO_LIB_PATH),$(ARDUINO_LIBS)/$(ARDUINO_LIBS)))
-ARDUINO_LIB_OBJS=$(patsubst %.cpp, libraries/%.o, $(addsuffix .cpp,$(ARDUINO_LIBS)))
-
-#
-# Arduino variant settings
-#
-ARDUINO_VARIANT_PATH=$(ARDUINO_PATH)/hardware/arduino/variants/$(VARIANT)
-
-#
-# Arduino library files used, compilation settings.
-#
-ARDUINO_CORELIB_PATH=$(ARDUINO_PATH)/hardware/arduino/cores/arduino/
-ARDUINO_CORELIB_SRCS=WInterrupts.c wiring.c wiring_digital.c wiring_analog.c
-ARDUINO_CORELIB_OBJS= $(patsubst %.c, libraries/%.o, $(patsubst %.cpp, libraries/%.o, $(ARDUINO_CORELIB_SRCS)))
-
-#
-# Arduino stdc library files used, compilation settings.
-#
-ARDUINO_LIBC_PATH=/usr/share/arduino/hardware/arduino/cores/arduino/avr-libc/
-ARDUINO_LIBC_SRCS=malloc.c realloc.c
-
-#
 # Master include path
 #
-INCLUDE=-I$(ARDUINO_CORELIB_PATH) -I$(ARDUINO_VARIANT_PATH) $(ARDUINO_LIB_INCL) -I.
+INCLUDE=-I.
 
 #
 # Target object files
 #
-OBJS=openLRSng.o printf.o serial.o $(ARDUINO_LIB_OBJS) libraries/libcore.a $(ARDUINO_LIBC_OBJS)
+OBJS=openLRSng.o printf.o serial.o
 ifeq ($(BOARD_TYPE),6)
 OBJS:= $(OBJS) usbcore.o
 endif
@@ -142,8 +114,6 @@ all: openLRSng.hex
 #
 # From here down are build rules
 #
-VPATH := $(ARDUINO_LIB_DIRS) $(ARDUINO_CORELIB_PATH) $(ARDUINO_LIBC_PATH)
-
 define ino-command
 	$(CXX) -c $(COPTFLAGS) $(CXXFLAGS) $(CFLAGS) $(INCLUDE) -o $@ -x c++ $<
 endef
@@ -165,29 +135,20 @@ endef
 %.o: %.cpp
 	$(cxx-command)
 
-libraries/%.o: %.c
-	$(cc-command)
-
-libraries/%.o: %.cpp
-	$(cxx-command)
-
 #
 # Other targets
 #
 clean:
-	rm -f *.[aod] libraries/*.[aod] *.elf *.eep *.d *.hex
+	rm -f *.[aod] *.elf *.eep *.d *.hex
 
 openLRSng.hex: $(OBJS)
-	$(CC) -Os -Wl,--gc-sections -mmcu=$(CPU) -o openLRSng.elf $(OBJS) -Llibraries -lm 
+	$(CC) -Os -Wl,--gc-sections -mmcu=$(CPU) -o openLRSng.elf $(OBJS) -lm 
 	@$(OBJCOPY) -O ihex -j .eeprom --set-section-flags=.eeprom=alloc,load \
 		--no-change-warnings --change-section-lma .eeprom=0 \
 		openLRSng.elf openLRSng.eep 
 	@$(OBJCOPY) -O ihex -R .eeprom openLRSng.elf openLRSng.hex 
 	@echo "NOTE: Deployment size is text + data."
 	@$(SIZE) openLRSng.elf
-
-libraries/libcore.a: $(ARDUINO_CORELIB_OBJS)
-	$(AR) rcs libraries/libcore.a $(ARDUINO_CORELIB_OBJS)
 
 astyle:
 	$(ASTYLE) $(ASTYLEOPTIONS) openLRSng.ino *.h

@@ -330,9 +330,6 @@ void setup(void)
   delay(200);
   checkBND();
 
-  // Not sure who's right here
-  //checkButton();
-
   // switch to userdefined baudrate here
   SerialBegin(TelemetrySerial, bind_data.serial_baudrate);
 
