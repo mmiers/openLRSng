@@ -80,6 +80,12 @@
 #include <avr/pgmspace.h>
 #include <avr/eeprom.h>
 
+//
+// The Arduino build can randomly stick includes of this file
+// in the preprocessed code.  Make sure we don't include theirs.
+//
+#define Arduino_h
+
 /*
  * Arduino legacy APIs and defines
  */
