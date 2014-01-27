@@ -96,7 +96,7 @@ void bindMode(void)
 {
   uint32_t prevsend = millis();
   uint8_t  tx_buf[sizeof(bind_data) + 1];
-  boolean  sendBinds = 1;
+  bool  sendBinds = 1;
 
   init_rfm(1);
 

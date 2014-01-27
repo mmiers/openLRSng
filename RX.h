@@ -1,6 +1,7 @@
 /****************************************************
  * OpenLRSng receiver code
  ****************************************************/
+
 uint8_t RF_channel = 0;
 
 uint32_t lastPacketTimeUs = 0;
@@ -35,7 +36,7 @@ uint8_t numberOfLostPackets = 0;
 volatile uint8_t slaveState = 0; // 0 - no slave, 1 - slave initializing, 2 - slave running, 3- errored
 uint32_t slaveFailedMs = 0;
 
-boolean willhop = 0, fs_saved = 0;
+bool willhop = 0, fs_saved = 0;
 
 pinMask_t chToMask[PPM_CHANNELS];
 pinMask_t clearMask;
@@ -288,7 +289,7 @@ void setupOutputs()
   }
 }
 
-void updateLBeep(boolean packetlost)
+void updateLBeep(bool packetlost)
 {
   if (rx_config.pinMapping[RSSI_OUTPUT] == PINMAP_LBEEP) {
     if (packetlost) {

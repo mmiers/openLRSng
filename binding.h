@@ -132,8 +132,6 @@ struct rfm22_modem_regs bind_params =
 // prototype
 void fatalBlink(uint8_t blinks);
 
-#include <avr/eeprom.h>
-
 // Save EEPROM by writing just changed data
 void myEEPROMwrite(int16_t addr, uint8_t data)
 {
@@ -239,9 +237,10 @@ void bindRandomize(void)
   }
 
   for (c = 0; (c < MAXHOPS) && (bind_data.hopchannel[c] != 0); c++) {
-again:
-    uint8_t ch = (random() % 50) + 1;
+    uint8_t ch;
 
+again:
+    ch = (random() % 50) + 1;
     // don't allow same channel twice
     for (uint8_t i = 0; i < c; i++) {
       if (bind_data.hopchannel[i] == ch) {
