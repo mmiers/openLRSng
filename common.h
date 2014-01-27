@@ -175,16 +175,16 @@ void scannerMode(void)
   uint32_t rssiSum = 0;
   Red_LED_OFF;
   Green_LED_OFF;
-  lrs_puts(Serial, "scanner mode");
+  lrs_puts("scanner mode");
   to_rx_mode();
 
   while (startFreq != 1000) { // if startFreq == 1000, break (used to exit scannerMode)
     while (lrs_inputPending(Serial)) {
-      c = lrs_getc(Serial);
+      c = lrs_getc();
 
       switch (c) {
       case 'D':
-        lrs_printf(Serial, "D%lu,%lu,\r\n", MIN_RFM_FREQUENCY, MAX_RFM_FREQUENCY);
+        lrs_printf("D%lu,%lu,\r\n", MIN_RFM_FREQUENCY, MAX_RFM_FREQUENCY);
         break;
 
       case '#':
@@ -260,7 +260,7 @@ void scannerMode(void)
 
       currentSamples++;
     } else {
-      lrs_printf(Serial, "%lu,%hu,%lu,%hu,\r\n",
+      lrs_printf("%lu,%hu,%lu,%hu,\r\n",
                  currentFrequency / 1000UL, rssiMax, rssiSum / currentSamples, rssiMin);
       currentFrequency += stepSize;
 
@@ -558,11 +558,11 @@ void tx_packet(uint8_t* pkt, uint8_t size)
   tx_packet_async(pkt, size);
   while ((RF_Mode == Transmit) && ((micros() - tx_start) < 100000));
   if (RF_Mode == Transmit) {
-    lrs_puts(Serial, "TX timeout!");
+    lrs_puts("TX timeout!");
   }
 
 #ifdef TX_TIMING
-  lrs_printf(Serial, "TX took:%lu\r\n", micros() - tx_start);
+  lrs_printf("TX took:%lu\r\n", micros() - tx_start);
 #endif
 }
 
@@ -570,7 +570,7 @@ uint8_t tx_done()
 {
   if (RF_Mode != Transmit) {
 #ifdef TX_TIMING
-  lrs_printf(Serial, "TX took:%lu\r\n", micros() - tx_start);
+  lrs_printf("TX took:%lu\r\n", micros() - tx_start);
 #endif
     return 1; // success
   }
@@ -664,9 +664,9 @@ void beacon_send(void)
 // Print version, either x.y or x.y.z (if z != 0)
 void printVersion(uint16_t v)
 {
-  lrs_printf(Serial, "%hu.%hu", v >> 8, (v >> 4) & 0x0f);
+  lrs_printf("%hu.%hu", v >> 8, (v >> 4) & 0x0f);
   if (version & 0x0f) {
-    lrs_printf(Serial, ".%hu", v & 0x0f);
+    lrs_printf(".%hu", v & 0x0f);
   }
 }
 

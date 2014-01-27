@@ -22,20 +22,20 @@ void hexDump(void *in, uint16_t bytes)
 {
   uint16_t check=0;
   uint8_t  *p = (uint8_t*)in;
-  lrs_printf(Serial, "@S:%u", bytes);
+  lrs_printf("@S:%u", bytes);
   if (bytes) {
-    lrs_printf(Serial, "H:");
+    lrs_printf("H:");
     while (bytes) {
-      lrs_putc(Serial, hexTab[*(p)>>4]);
-      lrs_putc(Serial, hexTab[*(p)&15]);
-      lrs_putc(Serial, ',');
+      lrs_putc(hexTab[*(p)>>4]);
+      lrs_putc(hexTab[*(p)&15]);
+      lrs_putc(',');
       check = ((check << 1) + ((check & 0x8000) ? 1 : 0));
       check ^= *p;
       p++;
       bytes--;
     }
   }
-  lrs_printf(Serial, "T:%x:", check);
+  lrs_printf("T:%x:", check);
 }
 
 void hexGet(void *out, uint16_t expected)
@@ -49,7 +49,7 @@ void hexGet(void *out, uint16_t expected)
   char     ch;
   while ((millis() - start) < 2000) {
     if (lrs_inputPending(Serial)) {
-      ch=lrs_getc(Serial);
+      ch=lrs_getc();
       switch (state) {
       case 0: // wait for S
         if (ch == 'S') {
@@ -115,7 +115,7 @@ void hexGet(void *out, uint16_t expected)
           numin = numin * 16 + (ch - 'A' + 10);
         } else if (ch == ':') {
           if (check == numin) {
-            lrs_puts(Serial, "BINARY LOAD OK");
+            lrs_puts("BINARY LOAD OK");
             memcpy(out, buffer, expected);
             return;
           }
@@ -125,108 +125,108 @@ void hexGet(void *out, uint16_t expected)
     }
   }
 fail:
-  lrs_puts(Serial, "Timeout or error!!");
+  lrs_puts("Timeout or error!!");
   delay(10);
   while (lrs_inputPending(Serial)) {
-    lrs_getc(Serial);
+    lrs_getc();
   }
 }
 
 void bindPrint(void)
 {
 
-  lrs_printf(Serial, "1) Base frequency:     %lu\r\n", bind_data.rf_frequency);
-  lrs_printf(Serial, "2) RF magic:           %lx\r\n", bind_data.rf_magic);
-  lrs_printf(Serial, "3) RF power (0-7):     %hu\r\n", bind_data.rf_power);
-  lrs_printf(Serial, "4) Channel spacing:    %hu\r\n", bind_data.rf_channel_spacing);
-  lrs_printf(Serial, "5) Hop channels:       ");
+  lrs_printf("1) Base frequency:     %lu\r\n", bind_data.rf_frequency);
+  lrs_printf("2) RF magic:           %lx\r\n", bind_data.rf_magic);
+  lrs_printf("3) RF power (0-7):     %hu\r\n", bind_data.rf_power);
+  lrs_printf("4) Channel spacing:    %hu\r\n", bind_data.rf_channel_spacing);
+  lrs_printf("5) Hop channels:       ");
   for (uint8_t c = 0; (c < MAXHOPS) && (bind_data.hopchannel[c] != 0); c++) {
     if (c) {
-      lrs_putc(Serial, ',');
+      lrs_putc(',');
     }
-    lrs_printf(Serial, "%hu", bind_data.hopchannel[c]);
+    lrs_printf("%hu", bind_data.hopchannel[c]);
   }
-  lrs_putc(Serial, '\r');
-  lrs_putc(Serial, '\n');
+  lrs_putc('\r');
+  lrs_putc('\n');
 
-  lrs_printf(Serial, "6) Datarate (0-2):     %hu\r\n", bind_data.modem_params);
-  lrs_printf(Serial, "7) Channel config:     %s\r\n", chConfStr[bind_data.flags & 0x07]);
-  lrs_printf(Serial, "8) Telemetry:          ");
+  lrs_printf("6) Datarate (0-2):     %hu\r\n", bind_data.modem_params);
+  lrs_printf("7) Channel config:     %s\r\n", chConfStr[bind_data.flags & 0x07]);
+  lrs_printf("8) Telemetry:          ");
   switch (bind_data.flags & TELEMETRY_MASK) {
   case TELEMETRY_OFF:
-    lrs_puts(Serial, "Disabled");
+    lrs_puts("Disabled");
     break;
   case TELEMETRY_PASSTHRU:
-    lrs_puts(Serial, "Transparent");
+    lrs_puts("Transparent");
     break;
   case TELEMETRY_FRSKY:
-    lrs_puts(Serial, "FrSky");
+    lrs_puts("FrSky");
     break;
   case TELEMETRY_SMARTPORT:
-    lrs_puts(Serial, "smartPort");
+    lrs_puts("smartPort");
     break;
   }
 
-  lrs_printf(Serial, "9) Serial baudrate:      %ld\r\n", bind_data.serial_baudrate);
-  lrs_printf(Serial, "0) Mute buzzer (mostly): %s\r\n", (bind_data.flags & MUTE_TX) ? "Yes" : "No");
-  lrs_printf(Serial, "A) Inverted PPM in:      %s\r\n", (bind_data.flags & INVERTED_PPMIN) ? "Yes" : "No");
-  lrs_printf(Serial, "B) Micro (half) PPM:     %s\r\n", (bind_data.flags & MICROPPM) ? "Yes" : "No");
-  lrs_printf(Serial, "Calculated packet interval: %lu == %lu Hz\r\n",
+  lrs_printf("9) Serial baudrate:      %ld\r\n", bind_data.serial_baudrate);
+  lrs_printf("0) Mute buzzer (mostly): %s\r\n", (bind_data.flags & MUTE_TX) ? "Yes" : "No");
+  lrs_printf("A) Inverted PPM in:      %s\r\n", (bind_data.flags & INVERTED_PPMIN) ? "Yes" : "No");
+  lrs_printf("B) Micro (half) PPM:     %s\r\n", (bind_data.flags & MICROPPM) ? "Yes" : "No");
+  lrs_printf("Calculated packet interval: %lu == %lu Hz\r\n",
              getInterval(&bind_data), 1000000L / getInterval(&bind_data));
 }
 
 void rxPrintDTime(uint8_t val)
 {
   if (!val) {
-    lrs_puts(Serial, "Disabled");
+    lrs_puts("Disabled");
   } else {
     uint32_t ms = delayInMs(val) / 100;
-    lrs_printf(Serial, "%lu.%lus\r\n", ms / 10, ms % 10);
+    lrs_printf("%lu.%lus\r\n", ms / 10, ms % 10);
   }
 }
 
 void rxPrint(void)
 {
   uint8_t i;
-  lrs_printf(Serial, "RX type: ");
+  lrs_printf("RX type: ");
   if (rx_config.rx_type == RX_FLYTRON8CH) {
-    lrs_puts(Serial, "Flytron/OrangeRX UHF 8ch");
+    lrs_puts("Flytron/OrangeRX UHF 8ch");
   } else if (rx_config.rx_type == RX_OLRSNG4CH) {
-    lrs_puts(Serial, "OpenLRSngRX mini 4/6ch");
+    lrs_puts("OpenLRSngRX mini 4/6ch");
   } else if (rx_config.rx_type == RX_DTFUHF10CH) {
-    lrs_puts(Serial, "DTF UHF 32-bit 10ch");
+    lrs_puts("DTF UHF 32-bit 10ch");
   }
   for (i=0; i < rxcNumberOfOutputs; i++) {
-    lrs_putc(Serial, (char)(((i + 1) > 9) ? (i + 'A' - 9) : (i + '1')));
-    lrs_printf(Serial, ") port %d function: ", i + 1);
+    lrs_putc((char)(((i + 1) > 9) ? (i + 'A' - 9) : (i + '1')));
+    lrs_printf(") port %d function: ", i + 1);
     if (rx_config.pinMapping[i] < 16) {
-      lrs_printf(Serial, "PWM channel %d\r\n", rx_config.pinMapping[i] + 1);
+      lrs_printf("PWM channel %d\r\n", rx_config.pinMapping[i] + 1);
     } else {
-      lrs_printf(Serial, "%s\r\n", SPECIALSTR(rx_config.pinMapping[i]));
+      lrs_printf("%s\r\n", SPECIALSTR(rx_config.pinMapping[i]));
     }
   }
-  lrs_printf(Serial, "F) Failsafe delay       : "); rxPrintDTime(rx_config.failsafeDelay);
-  lrs_printf(Serial, "G) PPM stop delay       : "); rxPrintDTime(rx_config.ppmStopDelay);
-  lrs_printf(Serial, "H) PWM stop delay       : "); rxPrintDTime(rx_config.pwmStopDelay);
-  lrs_printf(Serial, "I) Failsafe beacon frq. : ");
+  lrs_printf("F) Failsafe delay       : "); rxPrintDTime(rx_config.failsafeDelay);
+  lrs_printf("G) PPM stop delay       : "); rxPrintDTime(rx_config.ppmStopDelay);
+  lrs_printf("H) PWM stop delay       : "); rxPrintDTime(rx_config.pwmStopDelay);
+  lrs_printf("I) Failsafe beacon frq. : ");
   if (rx_config.beacon_frequency) {
-    lrs_printf(Serial, "%lu\r\n", rx_config.beacon_frequency);
-    lrs_printf(Serial, "J) Failsafe beacon delay (0-255 => 10s - 150min): %lu\r\n", delayInMsLong(rx_config.beacon_deadtime));
-    lrs_printf(Serial, "K) Failsafe beacon intv. (1-255s): %hu\r\n", rx_config.beacon_interval);
+    lrs_printf("%lu\r\n", rx_config.beacon_frequency);
+    lrs_printf("J) Failsafe beacon delay (0-255 => 10s - 150min): %lu\r\n", delayInMsLong(rx_config.beacon_deadtime));
+    lrs_printf("K) Failsafe beacon intv. (1-255s): %hu\r\n", rx_config.beacon_interval);
   } else {
-    lrs_printf(Serial, "DISABLED\r\n");
+    lrs_printf("DISABLED\r\n");
   }
-  lrs_printf(Serial, "L) PPM minimum sync (us)  : %u\r\n", rx_config.minsync);
-  lrs_printf(Serial, "M) PPM RSSI to channel    : ");
+  lrs_printf("L) PPM minimum sync (us)  : %u\r\n", rx_config.minsync);
+  lrs_printf("M) PPM RSSI to channel    : ");
   if (rx_config.RSSIpwm < 16) {
-    lrs_printf(Serial, "%i\r\n", rx_config.RSSIpwm + 1);
+    lrs_printf("%i\r\n", rx_config.RSSIpwm + 1);
   } else {
-    lrs_puts(Serial, "DISABLED");
+    lrs_puts("DISABLED");
   }
-  lrs_printf(Serial, "N) PPM output limited       : %s\r\n", (rx_config.flags & PPM_MAX_8CH) ? "8ch" : "N/A");
-  lrs_printf(Serial, "O) Timed BIND at startup    : %s\r\n", (rx_config.flags & ALWAYS_BIND) ? "Enabled" : "Disabled");
-  lrs_printf(Serial, "P) Slave mode (experimental): %s\r\n", (rx_config.flags & SLAVE_MODE) ? "Enabled" : "Disabled");
-  lrs_printf(Serial, "Q) Output before link (=FS) : %s\r\n", (rx_config.flags & IMMEDIATE_OUTPUT) ? "Enabled" : "Disabled");
+  lrs_printf("N) PPM output limited       : %s\r\n", (rx_config.flags & PPM_MAX_8CH) ? "8ch" : "N/A");
+  lrs_printf("O) Timed BIND at startup    : %s\r\n", (rx_config.flags & ALWAYS_BIND) ? "Enabled" : "Disabled");
+  lrs_printf("P) Slave mode (experimental): %s\r\n", (rx_config.flags & SLAVE_MODE) ? "Enabled" : "Disabled");
+  lrs_printf("Q) Output before link (=FS) : %s\r\n", (rx_config.flags & IMMEDIATE_OUTPUT) ? "Enabled" : "Disabled");
 }
 
 void CLI_menu_headers(void)
@@ -234,49 +234,49 @@ void CLI_menu_headers(void)
 
   switch (CLI_menu) {
   case -1:
-    lrs_printf(Serial, "\n\nopenLRSng ");
+    lrs_printf("\n\nopenLRSng ");
     printVersion(version);
-    lrs_puts(Serial, " - System configuration");
-    lrs_puts(Serial, "Use numbers [0-9] to edit parameters");
-    lrs_puts(Serial, "[S] save settings to EEPROM and exit menu");
-    lrs_puts(Serial, "[X] revert changes and exit menu");
-    lrs_puts(Serial, "[I] reinitialize settings to sketch defaults");
-    lrs_puts(Serial, "[R] calculate random key and hop list");
-    lrs_puts(Serial, "[F] display actual frequencies used");
-    lrs_puts(Serial, "[Z] enter receiver configuration utility\n");
+    lrs_puts(" - System configuration");
+    lrs_puts("Use numbers [0-9] to edit parameters");
+    lrs_puts("[S] save settings to EEPROM and exit menu");
+    lrs_puts("[X] revert changes and exit menu");
+    lrs_puts("[I] reinitialize settings to sketch defaults");
+    lrs_puts("[R] calculate random key and hop list");
+    lrs_puts("[F] display actual frequencies used");
+    lrs_puts("[Z] enter receiver configuration utility\n");
     bindPrint();
     break;
   case 1:
-    lrs_puts(Serial, "Set base frequency (in Hz): ");
+    lrs_puts("Set base frequency (in Hz): ");
     break;
   case 2:
-    lrs_puts(Serial, "Set RF magic (hex) e.g. 0xDEADF00D: ");
+    lrs_puts("Set RF magic (hex) e.g. 0xDEADF00D: ");
     break;
   case 3:
-    lrs_puts(Serial, "Set RF power (0-7): ");
+    lrs_puts("Set RF power (0-7): ");
     break;
   case 4:
-    lrs_puts(Serial, "Set channel spacing (x10kHz): ");
+    lrs_puts("Set channel spacing (x10kHz): ");
     break;
   case 5:
-    lrs_puts(Serial, "Set Hop channels (max 24, separated by commas) valid values 1-255: ");
+    lrs_puts("Set Hop channels (max 24, separated by commas) valid values 1-255: ");
     break;
   case 6:
-    lrs_puts(Serial, "Set Datarate (0-2): ");
+    lrs_puts("Set Datarate (0-2): ");
     break;
   case 7:
-    lrs_puts(Serial, "Set Channel config: ");
-    lrs_puts(Serial, "Valid choices: 1 - 4+4 / 2 - 8 / 3 - 8+4 / 4 - 12 / 5 - 12+4 / 6 - 16");
+    lrs_puts("Set Channel config: ");
+    lrs_puts("Valid choices: 1 - 4+4 / 2 - 8 / 3 - 8+4 / 4 - 12 / 5 - 12+4 / 6 - 16");
     break;
   case 9:
-    lrs_puts(Serial, "Set serial baudrate: ");
+    lrs_puts("Set serial baudrate: ");
     break;
   }
 
   // Flush input
   delay(10);
   while (lrs_inputPending(Serial)) {
-    lrs_getc(Serial);
+    lrs_getc();
   }
 }
 
@@ -285,29 +285,29 @@ void RX_menu_headers(void)
   uint8_t ch;
   switch (CLI_menu) {
   case -1:
-    lrs_printf(Serial, "\n\nopenLRSng ");
+    lrs_printf("\n\nopenLRSng ");
     printVersion(version);
-    lrs_printf(Serial, " - receiver configurator, rx sw ");
+    lrs_printf(" - receiver configurator, rx sw ");
     printVersion(rxcVersion);
-    lrs_puts(Serial, "\r\nUse numbers [1-D] to edit ports [E-Q] for settings");
-    lrs_puts(Serial, "[R] revert RX settings to defaults");
-    lrs_puts(Serial, "[S] save settings to RX");
-    lrs_puts(Serial, "[X] abort changes and exit RX config\n");
+    lrs_puts("\r\nUse numbers [1-D] to edit ports [E-Q] for settings");
+    lrs_puts("[R] revert RX settings to defaults");
+    lrs_puts("[S] save settings to RX");
+    lrs_puts("[X] abort changes and exit RX config\n");
     rxPrint();
     break;
   default:
     if ((CLI_menu > 0) && (CLI_menu <= rxcNumberOfOutputs)) {
-      lrs_printf(Serial, "Set output for port %hd\r\n", CLI_menu);
-      lrs_printf(Serial, "Valid choices are: [1]-[16] (channel 1-16)");
+      lrs_printf("Set output for port %hd\r\n", CLI_menu);
+      lrs_printf("Valid choices are: [1]-[16] (channel 1-16)");
       ch=20;
       for (uint8_t i = 0; i < rxcSpecialPinCount; i++) {
         if (rxcSpecialPins[i].output == CLI_menu - 1) {
-          lrs_printf(Serial, ", [%hu] (%s)", ch, SPECIALSTR(rxcSpecialPins[i].type));
+          lrs_printf(", [%hu] (%s)", ch, SPECIALSTR(rxcSpecialPins[i].type));
           ch++;
         }
       }
-      lrs_putc(Serial, '\r');
-      lrs_putc(Serial, '\n');
+      lrs_putc('\r');
+      lrs_putc('\n');
     }
     break;
   }
@@ -316,7 +316,7 @@ void RX_menu_headers(void)
 void showFrequencies()
 {
   for (uint8_t ch = 0; (ch < MAXHOPS) && (bind_data.hopchannel[ch] != 0) ; ch++) {
-    lrs_printf(Serial, "Hop channel %hu @ %lu\r\n",
+    lrs_printf("Hop channel %hu @ %lu\r\n",
                ch, bind_data.rf_frequency + 10000L * bind_data.hopchannel[ch] * bind_data.rf_channel_spacing);
   }
 }
@@ -337,17 +337,17 @@ uint8_t CLI_inline_edit(char c)
       CLI_buffer[CLI_buffer_position] = 0;
 
       // Redraw the output with last character erased
-      lrs_putc(Serial, '\r');
+      lrs_putc('\r');
       for (uint8_t i = 0; i < CLI_buffer_position; i++) {
-        lrs_putc(Serial, CLI_buffer[i]);
+        lrs_putc(CLI_buffer[i]);
       }
-      lrs_putc(Serial, ' ');
-      lrs_putc(Serial, '\r');
+      lrs_putc(' ');
+      lrs_putc('\r');
       for (uint8_t i = 0; i < CLI_buffer_position; i++) {
-        lrs_putc(Serial, CLI_buffer[i]);
+        lrs_putc(CLI_buffer[i]);
       }
     } else {
-      lrs_putc(Serial, '\007'); // bell
+      lrs_putc('\007'); // bell
     }
   } else if (c == 0x1B) { // ESC
     CLI_buffer_reset();
@@ -356,10 +356,10 @@ uint8_t CLI_inline_edit(char c)
     return 1; // signal editing done
   } else {
     if (CLI_buffer_position < EDIT_BUFFER_SIZE) {
-      lrs_putc(Serial, c);
+      lrs_putc(c);
       CLI_buffer[CLI_buffer_position++] = c; // Store char in the buffer
     } else {
-      lrs_putc(Serial, '\007'); // bell
+      lrs_putc('\007'); // bell
     }
   }
   return 0;
@@ -383,7 +383,7 @@ void handleRXmenu(char c)
       break;
     case 's':
     case 'S': {
-      lrs_puts(Serial, "Sending settings to RX\n");
+      lrs_puts("Sending settings to RX\n");
       uint8_t tx_buf[1 + sizeof(rx_config)];
       tx_buf[0] = 'u';
       memcpy(tx_buf + 1, &rx_config, sizeof(rx_config));
@@ -395,16 +395,16 @@ void handleRXmenu(char c)
         spiSendAddress(0x7f);   // Send the package read command
         tx_buf[0] = spiReadData();
         if (tx_buf[0] == 'U') {
-          lrs_puts(Serial, "*****************************");
-          lrs_puts(Serial, "RX Acked - update successful!");
-          lrs_puts(Serial, "*****************************");
+          lrs_puts("*****************************");
+          lrs_puts("RX Acked - update successful!");
+          lrs_puts("*****************************");
         }
       }
     }
     break;
     case 'r':
     case 'R': {
-      lrs_puts(Serial, "Resetting settings on RX\n");
+      lrs_puts("Resetting settings on RX\n");
       uint8_t tx_buf[1 + sizeof(rx_config)];
       tx_buf[0] = 'i';
       tx_packet(tx_buf, 1);
@@ -419,9 +419,9 @@ void handleRXmenu(char c)
         }
         memcpy(&rx_config, tx_buf + 1, sizeof(rx_config));
         if (tx_buf[0]=='I') {
-          lrs_puts(Serial, "*****************************");
-          lrs_puts(Serial, "RX Acked - revert successful!");
-          lrs_puts(Serial, "*****************************");
+          lrs_puts("*****************************");
+          lrs_puts("RX Acked - revert successful!");
+          lrs_puts("*****************************");
         }
       }
     }
@@ -430,7 +430,7 @@ void handleRXmenu(char c)
     case 'X':
     case 0x1b: //ESC
       // restore settings from EEPROM
-      lrs_puts(Serial, "Aborted edits");
+      lrs_puts("Aborted edits");
       // leave CLI
       CLI_menu = -2;
       break;
@@ -457,7 +457,7 @@ void handleRXmenu(char c)
     case '1':
       c -= '0';
       if ( c > rxcNumberOfOutputs) {
-        lrs_puts(Serial, "invalid selection");
+        lrs_puts("invalid selection");
         break;
       }
       CLI_menu = c;
@@ -466,74 +466,74 @@ void handleRXmenu(char c)
     case 'f':
     case 'F':
       CLI_menu = 20;
-      lrs_puts(Serial, "Set failsafe delay (0 disabled, 1-255 == 0.1s - 50min)");
+      lrs_puts("Set failsafe delay (0 disabled, 1-255 == 0.1s - 50min)");
       break;
     case 'g':
     case 'G':
       CLI_menu = 21;
-      lrs_puts(Serial, "Set PPM stop delay (0 disabled, 1-255 == 0.1s - 50min)");
+      lrs_puts("Set PPM stop delay (0 disabled, 1-255 == 0.1s - 50min)");
       break;
     case 'h':
     case 'H':
       CLI_menu = 22;
-      lrs_puts(Serial, "Set PWM stop delay (0 disabled, 1-255 == 0.1s - 50min)");
+      lrs_puts("Set PWM stop delay (0 disabled, 1-255 == 0.1s - 50min)");
       break;
     case 'i':
     case 'I':
       CLI_menu = 23;
-      lrs_puts(Serial, "Set beacon frequency in Hz: 0=disable, Px=PMR channel x, Fx=FRS channel x");
+      lrs_puts("Set beacon frequency in Hz: 0=disable, Px=PMR channel x, Fx=FRS channel x");
       break;
     case 'j':
     case 'J':
       CLI_menu = 24;
-      lrs_puts(Serial, "Set beacon delay");
+      lrs_puts("Set beacon delay");
       break;
     case 'k':
     case 'K':
       CLI_menu = 25;
-      lrs_puts(Serial, "Set beacon interval");
+      lrs_puts("Set beacon interval");
       break;
     case 'l':
     case 'L':
       CLI_menu = 26;
-      lrs_puts(Serial, "Set PPM minimum sync");
+      lrs_puts("Set PPM minimum sync");
       break;
     case 'm':
     case 'M':
       CLI_menu = 27;
-      lrs_puts(Serial, "Set RSSI injection channel (0==disable)");
+      lrs_puts("Set RSSI injection channel (0==disable)");
       break;
     case 'n':
     case 'N':
-      lrs_puts(Serial, "Toggled PPM channel limit");
+      lrs_puts("Toggled PPM channel limit");
       rx_config.flags ^= PPM_MAX_8CH;
       CLI_menu = -1;
       RX_menu_headers();
       break;
     case 'o':
     case 'O':
-      lrs_puts(Serial, "Toggled 'always bind'");
+      lrs_puts("Toggled 'always bind'");
       rx_config.flags ^= ALWAYS_BIND;
       CLI_menu = -1;
       RX_menu_headers();
       break;
     case 'p':
     case 'P':
-      lrs_puts(Serial, "Toggled 'slave mode'");
+      lrs_puts("Toggled 'slave mode'");
       rx_config.flags ^= SLAVE_MODE;
       CLI_menu = -1;
       RX_menu_headers();
       break;
     case 'q':
     case 'Q':
-      lrs_puts(Serial, "Toggled 'immediate output'");
+      lrs_puts("Toggled 'immediate output'");
       rx_config.flags ^= IMMEDIATE_OUTPUT;
       CLI_menu = -1;
       RX_menu_headers();
       break;
     }
     while (lrs_inputPending(Serial)) {
-      lrs_getc(Serial);
+      lrs_getc();
     }
   } else { // we are inside the menu
     if (CLI_inline_edit(c)) {
@@ -648,13 +648,13 @@ void handleRXmenu(char c)
             bind_data.rf_magic++;
           }
         } else {
-          lrs_puts(Serial, "\r\nInvalid input - discarded!\007");
+          lrs_puts("\r\nInvalid input - discarded!\007");
         }
         CLI_buffer_reset();
         // Leave the editing submenu
         CLI_menu = -1;
-        lrs_putc(Serial, '\r');
-        lrs_putc(Serial, '\n');
+        lrs_putc('\r');
+        lrs_putc('\n');
         RX_menu_headers();
       }
     }
@@ -721,18 +721,18 @@ uint8_t rxcConnect()
 
 void CLI_RX_config()
 {
-  lrs_puts(Serial, "Connecting to RX, power up the RX (with bind plug if not using always bind)");
-  lrs_puts(Serial, "Press any key to cancel");
+  lrs_puts("Connecting to RX, power up the RX (with bind plug if not using always bind)");
+  lrs_puts("Press any key to cancel");
   if (lrs_inputPending(Serial)) {
-    handleRXmenu(lrs_getc(Serial));
+    handleRXmenu(lrs_getc());
   }
 
   switch (rxcConnect()) {
   case 2:
-    lrs_puts(Serial, "Timeout when connecting to RX");
+    lrs_puts("Timeout when connecting to RX");
     return;
   case 3:
-    lrs_puts(Serial, "Protocol error with RX");
+    lrs_puts("Protocol error with RX");
     return;
   }
 
@@ -741,7 +741,7 @@ void CLI_RX_config()
   RX_menu_headers();
   while (CLI_menu != -2) { // LOCK user here until settings are saved or abandonded
     if (lrs_inputPending(Serial)) {
-      handleRXmenu(lrs_getc(Serial));
+      handleRXmenu(lrs_getc());
     }
   }
 }
@@ -765,7 +765,7 @@ void handleCLImenu(char c)
     case 'S':
       // save settings to EEPROM
       bindWriteEeprom();
-      lrs_puts(Serial, "Settings saved to EEPROM");
+      lrs_puts("Settings saved to EEPROM");
       // leave CLI
       CLI_menu = -2;
       break;
@@ -774,7 +774,7 @@ void handleCLImenu(char c)
     case 0x1b: //ESC
       // restore settings from EEPROM
       bindReadEeprom();
-      lrs_puts(Serial, "Reverted settings from EEPROM");
+      lrs_puts("Reverted settings from EEPROM");
       // leave CLI
       CLI_menu = -2;
       break;
@@ -782,7 +782,7 @@ void handleCLImenu(char c)
     case 'I':
       // restore factory settings
       bindInitDefaults();
-      lrs_puts(Serial, "Loaded factory defaults");
+      lrs_puts("Loaded factory defaults");
 
       CLI_menu_headers();
       break;
@@ -790,7 +790,7 @@ void handleCLImenu(char c)
     case 'R':
       // randomize channels and key
       bindRandomize();
-      lrs_puts(Serial, "Key and channels randomized");
+      lrs_puts("Key and channels randomized");
 
       CLI_menu_headers();
       break;
@@ -810,7 +810,7 @@ void handleCLImenu(char c)
       CLI_menu_headers();
       break;
     case '8':
-      lrs_puts(Serial, "Toggled telemetry!");
+      lrs_puts("Toggled telemetry!");
       {
         uint8_t newf = (bind_data.flags + TELEMETRY_PASSTHRU) & TELEMETRY_MASK;
         bind_data.flags &= ~TELEMETRY_MASK;
@@ -824,21 +824,21 @@ void handleCLImenu(char c)
       CLI_menu_headers();
       break;
     case '0':
-      lrs_puts(Serial, "Toggled TX muting!");
+      lrs_puts("Toggled TX muting!");
       bind_data.flags ^= MUTE_TX;
       CLI_menu = -1;
       CLI_menu_headers();
       break;
     case 'a':
     case 'A':
-      lrs_puts(Serial, "Toggled inverted PPM!");
+      lrs_puts("Toggled inverted PPM!");
       bind_data.flags ^= INVERTED_PPMIN;
       CLI_menu = -1;
       CLI_menu_headers();
       break;
     case 'b':
     case 'B':
-      lrs_puts(Serial, "Toggled microPPM");
+      lrs_puts("Toggled microPPM");
       bind_data.flags ^= MICROPPM;
       CLI_menu = -1;
       CLI_menu_headers();
@@ -922,13 +922,13 @@ void handleCLImenu(char c)
             bind_data.rf_magic++;
           }
         } else {
-          lrs_puts(Serial, "\r\nInvalid input - discarded!\007");
+          lrs_puts("\r\nInvalid input - discarded!\007");
         }
         CLI_buffer_reset();
         // Leave the editing submenu
         CLI_menu = -1;
-        lrs_putc(Serial, '\r');
-        lrs_putc(Serial, '\n');
+        lrs_putc('\r');
+        lrs_putc('\n');
         CLI_menu_headers();
       }
     }
@@ -942,14 +942,14 @@ void handleCLI()
   CLI_menu_headers();
   while (CLI_menu != -2) { // LOCK user here until settings are saved
     if (lrs_inputPending(Serial)) {
-      handleCLImenu(lrs_getc(Serial));
+      handleCLImenu(lrs_getc());
     }
   }
 
   // Clear buffer
   delay(10);
   while (lrs_inputPending(Serial)) {
-    lrs_getc(Serial);
+    lrs_getc();
   }
 }
 

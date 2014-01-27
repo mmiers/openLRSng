@@ -307,11 +307,11 @@ uint8_t bindReceive(uint32_t timeout)
   init_rfm(1);
   RF_Mode = Receive;
   to_rx_mode();
-  lrs_puts(Serial, "Waiting bind\n");
+  lrs_puts("Waiting bind\n");
 
   while ((!timeout) || ((millis() - start) < timeout)) {
     if (RF_Mode == Received) {
-      lrs_puts(Serial, "Got pkt\n");
+      lrs_puts("Got pkt\n");
       spiSendAddress(0x7f);   // Send the package read command
       rxb = spiReadData();
       if (rxb == 'b') {
@@ -320,7 +320,7 @@ uint8_t bindReceive(uint32_t timeout)
         }
 
         if (bind_data.version == BINDING_VERSION) {
-          lrs_puts(Serial, "data good\n");
+          lrs_puts("data good\n");
           rxb = 'B';
           tx_packet(&rxb, 1); // ACK that we got bound
           Green_LED_ON; //signal we got bound on LED:s
@@ -525,9 +525,9 @@ void setup()
   SerialBegin(Serial, 115200);
   rxReadEeprom();
   failsafeLoad();
-  lrs_printf(Serial, "OpenLRSng RX starting ");
+  lrs_printf("OpenLRSng RX starting ");
   printVersion(version);
-  lrs_printf(Serial, " on HW %d\r\n", BOARD_TYPE);
+  lrs_printf(" on HW %d\r\n", BOARD_TYPE);
 
   setupRfmInterrupt();
 
@@ -541,11 +541,11 @@ void setup()
   }
 
   if (checkIfConnected(OUTPUT_PIN[0], OUTPUT_PIN[1]) || (!bindReadEeprom())) {
-    lrs_puts(Serial, "EEPROM data not valid or bind jumpper set, forcing bind");
+    lrs_puts("EEPROM data not valid or bind jumpper set, forcing bind");
 
     if (bindReceive(0)) {
       bindWriteEeprom();
-      lrs_puts(Serial, "Saved bind data to EEPROM\n");
+      lrs_puts("Saved bind data to EEPROM\n");
       Green_LED_ON;
     }
     setupOutputs();
@@ -560,7 +560,7 @@ void setup()
     if ((rx_config.flags & ALWAYS_BIND) && (!(rx_config.flags & SLAVE_MODE))) {
       if (bindReceive(500)) {
         bindWriteEeprom();
-        lrs_puts(Serial, "Saved bind data to EEPROM\n");
+        lrs_puts("Saved bind data to EEPROM\n");
         setupOutputs(); // parameters may have changed
         Green_LED_ON;
       }
@@ -571,7 +571,7 @@ void setup()
       (rx_config.pinMapping[SCL_OUTPUT] == PINMAP_SCL)) {
     myI2C_init(1);
     if (rx_config.flags & SLAVE_MODE) {
-      lrs_puts(Serial, "I am slave");
+      lrs_puts("I am slave");
       slaveLoop();
     } else {
       uint8_t ret,buf;
@@ -583,7 +583,7 @@ void setup()
     }
   }
 
-  lrs_puts(Serial, "Entering normal mode");
+  lrs_puts("Entering normal mode");
 
   init_rfm(0);   // Configure the RFM22B's registers for normal operation
   RF_channel = 0;
@@ -675,7 +675,7 @@ void loop()
   uint32_t timeUs, timeMs;
 
   if (spiReadRegister(0x0C) == 0) {     // detect the locked module and reboot
-    lrs_puts(Serial, "RX hang\n");
+    lrs_puts("RX hang\n");
     init_rfm(0);
     to_rx_mode();
   }

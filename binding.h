@@ -381,7 +381,7 @@ void rxReadEeprom()
 #else
 #error FIXME
 #endif
-    lrs_puts(Serial, "RXconf loaded");
+    lrs_puts("RXconf loaded");
   }
 }
 

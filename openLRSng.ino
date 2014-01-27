@@ -139,11 +139,11 @@ void attachInterrupt(uint8_t interruptNum, void (*userFunc)(void), int mode);
 #if BOARD_TYPE == 6
 USBSerialPort(portUSB);
 #define Serial              (&portUSB)
-#define SERIAL_CONSTRUCT()  USBSerialConstruct(Serial)
+#define SERIAL_CONSTRUCT()  { USBSerialConstruct(Serial); stdIn = &portUSB; stdOut = &portUSB; }
 #else
 SerialPort(port0, 0);
 #define Serial              (&port0)
-#define SERIAL_CONSTRUCT()  SerialConstruct(Serial, 0)
+#define SERIAL_CONSTRUCT()  { SerialConstruct(Serial, 0); stdIn = &port0; stdOut = &port0; }
 #endif
 
 #include "version.h"

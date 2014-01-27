@@ -134,7 +134,7 @@ void bindMode(void)
       switch (SerialRead(Serial)) {
       case '\n':
       case '\r':
-        lrs_puts(Serial, "Enter menu...");
+        lrs_puts("Enter menu...");
         handleCLI();
         break;
       case '#':
@@ -191,11 +191,11 @@ void checkButton(void)
       buzzerOff();
       if (swapProfile) {
         profileSwap((activeProfile + 1) % TX_PROFILE_COUNT);
-        lrs_printf(Serial, "New profile: %d\r\n", activeProfile);
+        lrs_printf("New profile: %d\r\n", activeProfile);
         if (bindReadEeprom()) {
-          lrs_puts(Serial, "Loaded settings from EEPROM\n");
+          lrs_puts("Loaded settings from EEPROM\n");
         } else {
-          lrs_puts(Serial, "EEPROM data not valid, reiniting");
+          lrs_puts("EEPROM data not valid, reiniting");
           bindInitDefaults();
           bindWriteEeprom();
         }
@@ -207,7 +207,7 @@ void checkButton(void)
     }
 just_bind:
     // Enter binding mode, automatically after recoding or when pressed for shorter time.
-    lrs_puts(Serial, "Entering binding mode\n");
+    lrs_puts("Entering binding mode\n");
     bindMode();
   }
 }
@@ -296,9 +296,9 @@ void setup(void)
   SerialBegin(Serial, 115200);
   profileInit();
   if (bindReadEeprom()) {
-    lrs_puts(Serial, "Loaded settings from EEPROM\n");
+    lrs_puts("Loaded settings from EEPROM\n");
   } else {
-    lrs_puts(Serial, "EEPROM data not valid, reiniting");
+    lrs_puts("EEPROM data not valid, reiniting");
     bindInitDefaults();
     bindWriteEeprom();
   }
@@ -321,9 +321,9 @@ void setup(void)
     SerialRead(Serial);
   }
 
-  lrs_printf(Serial, "OpenLRSng TX starting ");
+  lrs_printf("OpenLRSng TX starting ");
   printVersion(version);
-  lrs_printf(Serial, " on HW %d\r\n", BOARD_TYPE);
+  lrs_printf(" on HW %d\r\n", BOARD_TYPE);
 
   delay(200);
   checkBND();
@@ -377,7 +377,7 @@ uint8_t compositeRSSI(uint8_t rssi, uint8_t linkq)
 void loop(void)
 {
   if (spiReadRegister(0x0C) == 0) {     // detect the locked module and reboot
-    lrs_puts(Serial, "module locked?");
+    lrs_puts("module locked?");
     Red_LED_ON;
     init_rfm(0);
     rx_reset();
