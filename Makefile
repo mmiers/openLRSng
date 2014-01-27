@@ -131,7 +131,7 @@ INCLUDE=-I$(ARDUINO_CORELIB_PATH) -I$(ARDUINO_VARIANT_PATH) $(ARDUINO_LIB_INCL) 
 #
 OBJS=openLRSng.o printf.o serial.o $(ARDUINO_LIB_OBJS) libraries/libcore.a $(ARDUINO_LIBC_OBJS)
 ifeq ($(BOARD_TYPE),6)
-OBJS:= $(OBJS) usbcore.o
+OBJS:= usbcore.o $(OBJS)
 endif
 
 #
