@@ -150,6 +150,7 @@ SerialPort(port0, 0);
 #include "hardware.h"
 #include "binding.h"
 #include "common.h"
+#include "mavlink.h"
 
 #ifdef COMPILE_TX
 #include "binary_com.h"

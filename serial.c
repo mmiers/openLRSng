@@ -345,11 +345,26 @@ int SerialAvailable(SerialPort *ser)
   return ((ser->_rxBuffer->head - ser->_rxBuffer->tail) & ser->_rxBuffer->mask);
 }
 
+int SerialRxSpace(SerialPort *ser)
+{
+  if (!ser->_open)
+    return (-1);
+  return ((ser->_rxBuffer->mask+1) - ((ser->_rxBuffer->head - ser->_rxBuffer->tail) & ser->_rxBuffer->mask));
+}
+
 int SerialTxSpace(SerialPort *ser)
 {
   if (!ser->_open)
     return (-1);
   return ((ser->_txBuffer->mask+1) - ((ser->_txBuffer->head - ser->_txBuffer->tail) & ser->_txBuffer->mask));
+}
+
+int SerialBufferSize(SerialPort *ser)
+{
+  if (!ser->_open)
+    return (-1);
+  // Use either buffer, same size
+  return (ser->_rxBuffer->mask+1);
 }
 
 int SerialRead(SerialPort *ser)

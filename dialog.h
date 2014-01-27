@@ -171,6 +171,9 @@ void bindPrint(void)
   lrs_printf("0) Mute buzzer (mostly): %s\r\n", (bind_data.flags & MUTE_TX) ? "Yes" : "No");
   lrs_printf("A) Inverted PPM in:      %s\r\n", (bind_data.flags & INVERTED_PPMIN) ? "Yes" : "No");
   lrs_printf("B) Micro (half) PPM:     %s\r\n", (bind_data.flags & MICROPPM) ? "Yes" : "No");
+  lrs_printf("C) MAVlink framing     :", (bind_data.flags & MAVLINK_FRAMING) ? "Yes" : "No");
+  lrs_printf("D) Reverse PPM RSSI    :", (bind_data.flags & REVERSE_PPM_RSSI) ? "Yes" : "No");
+  lrs_printf("E) Telemetry packet size:", bind_data.serial_downlink);
   lrs_printf("Calculated packet interval: %lu == %lu Hz\r\n",
              getInterval(&bind_data), 1000000L / getInterval(&bind_data));
 }
@@ -270,6 +273,9 @@ void CLI_menu_headers(void)
     break;
   case 9:
     lrs_puts("Set serial baudrate: ");
+    break;
+  case 11:
+    lrs_puts("Set telemetry packet size: ");
     break;
   }
 
@@ -843,6 +849,25 @@ void handleCLImenu(char c)
       CLI_menu = -1;
       CLI_menu_headers();
       break;
+    case 'c':
+    case 'C':
+      lrs_puts("Toggled MAVlink framing");
+      bind_data.flags ^= MAVLINK_FRAMING;
+      CLI_menu = -1;
+      CLI_menu_headers();
+      break;
+    case 'd':
+    case 'D':
+      lrs_puts("Toggled Reverse PPM RSSI");
+      bind_data.flags ^= REVERSE_PPM_RSSI;
+      CLI_menu = -1;
+      CLI_menu_headers();
+      break;
+    case 'e':
+    case 'E':
+      CLI_menu = 11;
+      CLI_menu_headers();
+      break;
     case 'z':
     case 'Z':
       CLI_RX_config();
@@ -913,6 +938,12 @@ void handleCLImenu(char c)
         case 9:
           if ((value >= 1200) && (value <= 115200)) {
             bind_data.serial_baudrate = value;
+            valid_input = 1;
+          }
+          break;
+        case 11:
+          if ((value >= 1) && (value <= 63)) {
+            bind_data.serial_downlink = value;
             valid_input = 1;
           }
           break;

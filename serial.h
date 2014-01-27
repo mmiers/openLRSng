@@ -162,7 +162,9 @@ void     SerialBeginExt(SerialPort *, long baud,
                         unsigned int rxSpace, unsigned int txSpace);
 void     SerialEnd(SerialPort *);
 int      SerialAvailable(SerialPort *);
+int      SerialRxSpace(SerialPort *);
 int      SerialTxSpace(SerialPort *);
+int      SerialBufferSize(SerialPort *);
 int      SerialRead(SerialPort *);
 int      SerialPeek(SerialPort *);
 void     SerialFlush(SerialPort *);
