@@ -103,7 +103,7 @@ INCLUDE=-I.
 #
 OBJS=openLRSng.o printf.o serial.o
 ifeq ($(BOARD_TYPE),6)
-OBJS:= $(OBJS) usbcore.o
+OBJS:= usbcore.o $(OBJS)
 endif
 
 #
