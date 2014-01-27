@@ -9,7 +9,9 @@ char    CLI_buffer[EDIT_BUFFER_SIZE + 1];
 uint8_t CLI_buffer_position = 0;
 bool    CLI_magic_set = 0;
 
+#ifdef HEXGET
 const static char hexTab[16] = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F' };
+#endif
 const static char *chConfStr[8] = { "N/A", "4+4", "8", "8+4", "12", "12+4", "16", "N/A" };
 
 #define RXC_MAX_SPECIAL_PINS 16
@@ -18,6 +20,7 @@ uint8_t rxcSpecialPinCount;
 uint8_t rxcNumberOfOutputs;
 uint16_t rxcVersion;
 
+#ifdef HEXGET
 void hexDump(void *in, uint16_t bytes)
 {
   uint16_t check=0;
@@ -131,6 +134,7 @@ fail:
     lrs_getc();
   }
 }
+#endif
 
 void bindPrint(void)
 {
@@ -377,14 +381,22 @@ void handleRXmenu(char c)
   if (CLI_menu == -1) {
     switch (c) {
     case '!':
+#ifdef HEXGET
       hexDump(&rx_config, sizeof(rx_config));
+#else
+      lrs_puts("NOT ENABLED");
+#endif
       break;
     case '\n':
     case '\r':
       RX_menu_headers();
       break;
     case '@':
+#ifdef HEXGET
       hexGet(&rx_config, sizeof(rx_config));
+#else
+      lrs_puts("NOT ENABLED");
+#endif
       RX_menu_headers();
       break;
     case 's':
@@ -757,14 +769,22 @@ void handleCLImenu(char c)
   if (CLI_menu == -1) {
     switch (c) {
     case '!':
+#ifdef HEXGET
       hexDump(&bind_data, sizeof(bind_data));
+#else
+      lrs_puts("NOT ENABLED");
+#endif
       break;
     case '\n':
     case '\r':
       CLI_menu_headers();
       break;
     case '@':
+#ifdef HEXGET
       hexGet(&bind_data, sizeof(bind_data));
+#else
+      lrs_puts("NOT ENABLED");
+#endif
       CLI_menu_headers();
       break;
     case 's':
