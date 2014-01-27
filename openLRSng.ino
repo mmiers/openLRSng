@@ -79,6 +79,7 @@
 #include <avr/interrupt.h>
 #include <avr/pgmspace.h>
 #include <avr/eeprom.h>
+#include <avr/io.h>
 
 /*
  * Arduino legacy APIs and defines
@@ -94,45 +95,14 @@
 #define FALLING      2
 #define RISING       3
 
+#define DEFAULT      1
+#define EXTERNAL     0
+
 #define lowByte(w) ((uint8_t) ((w) & 0xff))
 #define highByte(w) ((uint8_t) ((w) >> 8))
 
 #include "cpu.h"
-
-#if defined(__cplusplus)
-extern "C"
-{
-#endif
-
-/*
- * Arduino APIs
- */
-// main.cpp
-void setup();
-void loop();
-
-// wiring.c
-unsigned long millis();
-unsigned long micros();
-void delay(unsigned long ms);
-void delayMicroseconds(unsigned int us);
-
-// wiring_digital.c
-void pinMode(uint8_t pin, uint8_t mode);
-void digitalWrite(uint8_t pin, uint8_t val);
-int digitalRead(uint8_t pin);
-
-// wiring_analog.c
-int analogRead(uint8_t pin);
-void analogWrite(uint8_t pin, int val);
-
-// WInterrupts.c
-void attachInterrupt(uint8_t interruptNum, void (*userFunc)(void), int mode);
-
-#if defined(__cplusplus)
-}
-#endif
-
+#include "wiring.h"
 #include "serial.h"
 #include "printf.h"
 
@@ -167,8 +137,6 @@ SerialPort(port0, 0);
 extern "C"
 {
 #endif
-
-extern void init();
 
 extern void USBDevice_Attach();
 
