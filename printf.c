@@ -3,6 +3,8 @@
  *
  * printf() style routine for openLRSng
  */
+#include <string.h>
+
 #include "printf.h"
 
 #define PRINTF_UC   0x01 // upper case on hex output
@@ -12,46 +14,61 @@
 #define PRINTF_LZ   0x10 // leading zeroes
 #define PRINTF_HALF 0x20 // half word (byte)
 
-static char* bf;
-static char buf[12];
-static uint32_t num;
-static uint8_t  flags;
-
-static void
-out(char c)
+static size_t
+print_string(size_t (*pr_putc)(void *data, char ch), void *data,
+             uint8_t flags, uint8_t w, char *p)
 {
-  *bf++ = c;
-}
+  size_t ret = 1;
 
-static void
-outDgt(char dgt)
-{
-  out(dgt + (dgt < 10 ? '0' : ((flags & PRINTF_UC) ? 'A' : 'a')-10));
-  flags |= PRINTF_ZS;
-}
-
-static void
-divOut(uint32_t div)
-{
-  unsigned char dgt=0;
-  while (num >= div) {
-    num -= div;
-    dgt++;
+  while (w-- > 0) {
+    if (!(*pr_putc)(data, (flags&PRINTF_LZ) ? '0' : ' '))
+      return 0;
   }
-  if ((flags & PRINTF_ZS) || dgt > 0)
-    outDgt(dgt);
+
+  char ch;
+  while ((ch= *p++)) {
+    if (!(*pr_putc)(data, ch))
+      return 0;
+  }
+
+  return ret;
+}
+
+static size_t
+print_number(size_t (*pr_putc)(void *data, char ch), void *data,
+             uint8_t flags, int8_t w, int32_t n, uint8_t base)
+{
+  char buf[8 * sizeof(long) + 1]; // Assumes 8-bit chars plus zero byte.
+  char *str = &buf[sizeof(buf) - 1];
+
+  *str = '\0';
+
+  // prevent crash if called with base == 1
+  if (base < 2) base = 10;
+
+  do {
+    unsigned long m = n;
+    n /= base;
+    char c = m - base * n;
+    *--str = c < 10 ? c + '0' : c + 'A' - 10;
+  } while(n);
+
+  w -= strlen(str);
+  return print_string(pr_putc, data, flags, w, str);
 }
 
 void
-format_output(size_t (*putc)(void *data, char ch),
+format_output(size_t (*pr_putc)(void *data, char ch),
               void *data, const char *fmt, va_list va)
 {
-  char ch;
-  char* p;
+  uint32_t num;
+  uint8_t flags;
+  char ch, *p;
 
   while ((ch = pgm_read_byte(fmt++))) {
+    flags = 0;
     if (ch != '%') {
-      if (!(*putc)(data, ch))
+      if (!(*pr_putc)(data, ch))
         return;
     }
     else {
@@ -76,8 +93,6 @@ format_output(size_t (*putc)(void *data, char ch),
         ch = pgm_read_byte(fmt++);
         flags |= PRINTF_HALF;
       }
-      bf = buf;
-      p = bf;
       switch (ch) {
       case 0:
         goto error;
@@ -94,61 +109,27 @@ format_output(size_t (*putc)(void *data, char ch),
         }
         if (ch == 'd' && (int32_t)num < 0) {
           num = -(int32_t)num;
-          out('-');
+          if (!(*pr_putc)(data, '-'))
+            goto error;
         }
-        if (flags & PRINTF_HEX) {
-          if (flags & PRINTF_LONG) {
-            divOut(0x10000000);
-            divOut(0x1000000);
-            divOut(0x100000);
-            divOut(0x10000);
-            divOut(0x1000);
-            divOut(0x100);
-          } else if (!(flags & PRINTF_HALF)) {
-            divOut(0x1000);
-            divOut(0x100);
-          }
-          divOut(0x10);
-        } else {
-          if (flags & PRINTF_LONG) {
-            divOut(1000000000);
-            divOut(100000000);
-            divOut(10000000);
-            divOut(1000000);
-            divOut(100000);
-            divOut(10000);
-            divOut(1000);
-          } else if (!(flags & PRINTF_HALF)) {
-            divOut(10000);
-            divOut(1000);
-          }
-          divOut(100);
-          divOut(10);
-        }
-        outDgt(num);
+        if (!print_number(pr_putc, data, flags, w, num, flags & PRINTF_HEX ? 16 : 10))
+          goto error;
         break;
       case 'c' :
-        out((char)(va_arg(va, int)));
+        if (!(*pr_putc)(data, (char)(va_arg(va, int))))
+          return;
         break;
       case 's' :
-        p = va_arg(va, char*);
+        p = va_arg(va, char *);
+        if (!print_string(pr_putc, data, flags,
+                          w == 0 ? 0 : w - strlen(p), p))
+          goto error;
         break;
       case '%' :
-        out('%');
+        if (!(*pr_putc)(data, '%'))
+          goto error;
       default:
         break;
-      }
-      *bf = 0;
-      bf = p;
-      while (*bf++ && w > 0)
-        w--;
-      while (w-- > 0) {
-        if (!(*putc)(data, (flags&PRINTF_LZ) ? '0' : ' '))
-          return;
-      }
-      while ((ch= *p++)) {
-        if (!(*putc)(data, ch))
-          return;
       }
     }
   }
