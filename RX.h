@@ -949,7 +949,7 @@ retry:
     if (rx_config.pinMapping[TXD_OUTPUT] == PINMAP_SPKTRM) {
       sendSpektrumFrame();
     } else if (rx_config.pinMapping[TXD_OUTPUT] == PINMAP_SBUS) {
-      sendSBUSFrame(failsafeActive);
+      sendSBUSFrame(failsafeActive, numberOfLostPackets);
     }
   }
 

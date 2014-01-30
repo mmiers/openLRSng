@@ -14,6 +14,8 @@
 ** SOFTWARE.  
 */
 
+#if BOARD_TYPE == 6
+
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdlib.h>
@@ -659,3 +661,9 @@ bool USBDevice_Configured()
 void USBDevice_Poll()
 {
 }
+
+#else
+
+void USBDevice_Attach() {}
+
+#endif // BOARD_TYPE == 6
