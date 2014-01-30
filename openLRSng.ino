@@ -182,7 +182,7 @@ int main(void)
 {
   init();
 
-#if BOARD_TYPE == 6
+#if __AVR_ATmega32U4__ == 1
   USBDevice_Attach();
 #endif
 
