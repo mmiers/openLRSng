@@ -81,18 +81,6 @@
 #include <avr/eeprom.h>
 #include <avr/io.h>
 
-//
-// The Arduino build can randomly stick includes of this file
-// in the preprocessed code.  Make sure we don't include theirs.
-//
-#define Arduino_h
-
-//
-// The Arduino build can randomly stick includes of this file
-// in the preprocessed code.  Make sure we don't include theirs.
-//
-#define Arduino_h
-
 /*
  * Arduino legacy APIs and defines
  */
