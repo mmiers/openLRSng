@@ -54,7 +54,7 @@
 // 4 = OpenLRSngTX / HawkEye UHF TX
 // 5 = OpenLRSngRX-4ch (DTF UHF) as TX
 // 6 = DTF UHF DeluxeTX (Atmega32u4)
-//#define BOARD_TYPE 6
+//#define BOARD_TYPE 3
 
 //####### RX BOARD TYPE #######
 // 3 = Flytron OpenLRS Rx v2 / OrangeRx UHF RX / HawkEye UHF RX
@@ -80,6 +80,12 @@
 #include <avr/pgmspace.h>
 #include <avr/eeprom.h>
 #include <avr/io.h>
+
+//
+// The Arduino build can randomly stick includes of this file
+// in the preprocessed code.  Make sure we don't include theirs.
+//
+#define Arduino_h
 
 //
 // The Arduino build can randomly stick includes of this file
