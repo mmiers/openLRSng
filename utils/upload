@@ -30,5 +30,5 @@ AVRDUDEFLAGS="-v -v -p${CPU} -carduino -P${TTY} -b${BAUD}"
 #
 # upload the hex file.
 #
-exec ${AVRDUDE} -C${AVRDUDECONF} ${AVRDUDEFLAGS} -D -Uflash:w:${1-out/TX-2.hex}:i
+exec ${AVRDUDE} -C${AVRDUDECONF} ${AVRDUDEFLAGS} -D -Uflash:w:${1-openLRSng.hex}:i
 
