@@ -59,7 +59,7 @@ void SerialSetBlockingWrites(SerialPort *ser, bool blocking)
   ser->_nonblocking_writes = !blocking;
 }
 
-#if BOARD_TYPE == 6
+#if __AVR_ATmega32U4__ == 1
 /*
 ** Copyright (c) 2011, Peter Barrett  
 **  
@@ -291,7 +291,7 @@ void SerialBeginExt(SerialPort *ser, long baud,
   // mark the port as open
   ser->_open = true;
 
-#if BOARD_TYPE == 6
+#if __AVR_ATmega32U4__ == 1
   // Short circuit for USB
   if (ser->_type == SERIAL_USB)
     return;
@@ -395,7 +395,7 @@ int SerialPeek(SerialPort *ser)
 
 void SerialFlush(SerialPort *ser)
 {
-#if BOARD_TYPE == 6
+#if __AVR_ATmega32U4__ == 1
   // Short circuit on USB
   if (ser->_type == SERIAL_USB) {
     USBSerial_Flush();
@@ -427,7 +427,7 @@ size_t SerialWrite(SerialPort *ser, uint8_t c)
   if (!ser->_open) // drop bytes if not open
     return 0;
 
-#if BOARD_TYPE == 6
+#if __AVR_ATmega32U4__ == 1
   if (ser->_type == SERIAL_USB) {
     USBSerial_Write(c);
     return 0;

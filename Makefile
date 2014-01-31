@@ -101,10 +101,7 @@ INCLUDE=-I.
 #
 # Target object files
 #
-OBJS=openLRSng.o printf.o serial.o
-ifeq ($(BOARD_TYPE),6)
-OBJS:= usbcore.o $(OBJS)
-endif
+OBJS=openLRSng.o printf.o serial.o usbcore.o
 
 #
 # Master target
@@ -118,7 +115,7 @@ define ino-command
 	$(CXX) -c $(COPTFLAGS) $(CXXFLAGS) $(CFLAGS) $(INCLUDE) -o $@ -x c++ $<
 endef
 define cc-command
-	$(CC) -c $(COPTFLAGS) $(CFLAGS) $(INCLUDE) -o $@ $<
+	$(CC) --std=c99 -c $(COPTFLAGS) $(CFLAGS) $(INCLUDE) -o $@ $<
 endef
 define cxx-command
 	$(CXX) -c $(COPTFLAGS) $(CXXFLAGS) $(CFLAGS) $(INCLUDE) -o $@ $<
