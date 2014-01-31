@@ -978,9 +978,10 @@ void binaryMode()
   // Just entered binary mode, flip the bool
   binary_mode_active = true;
 
+  PSP_init(&binary_com);
   while (binary_mode_active == true) { // LOCK user here until exit command is received
-    if (lrs_inputPending(Serial)) {
-      binary_com.read_packet();
+    if (SerialAvailable(Serial)) {
+      PSP_read_packet(&binary_com);
     }
   }
 }
