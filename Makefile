@@ -101,10 +101,7 @@ INCLUDE=-I.
 #
 # Target object files
 #
-OBJS=openLRSng.o printf.o serial.o
-ifeq ($(BOARD_TYPE),6)
-OBJS:= usbcore.o $(OBJS)
-endif
+OBJS=openLRSng.o printf.o serial.o usbcore.o
 
 #
 # Master target

@@ -276,7 +276,7 @@ struct hack
               (_BV(RXEN##_num) | _BV(TXEN##_num) | _BV(RXCIE##_num)), \
               (_BV(UDRIE##_num)));                               \
 
-#if BOARD_TYPE == 6
+#if __AVR_ATmega32U4__ == 1
 # define USB_MAX_PORTS  1
 #else
 # define USB_MAX_PORTS  0

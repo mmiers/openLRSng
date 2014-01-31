@@ -14,7 +14,7 @@
 ** SOFTWARE.  
 */
 
-#if BOARD_TYPE == 6
+#if __AVR_ATmega32U4__ == 1
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -662,8 +662,4 @@ void USBDevice_Poll()
 {
 }
 
-#else
-
-void USBDevice_Attach() {}
-
-#endif // BOARD_TYPE == 6
+#endif // __AVR_ATmega32U4__ == 1
