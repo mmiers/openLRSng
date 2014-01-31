@@ -115,7 +115,7 @@ define ino-command
 	$(CXX) -c $(COPTFLAGS) $(CXXFLAGS) $(CFLAGS) $(INCLUDE) -o $@ -x c++ $<
 endef
 define cc-command
-	$(CC) -c $(COPTFLAGS) $(CFLAGS) $(INCLUDE) -o $@ $<
+	$(CC) --std=c99 -c $(COPTFLAGS) $(CFLAGS) $(INCLUDE) -o $@ $<
 endef
 define cxx-command
 	$(CXX) -c $(COPTFLAGS) $(CXXFLAGS) $(CFLAGS) $(INCLUDE) -o $@ $<
