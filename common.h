@@ -186,6 +186,11 @@ void scannerMode(void)
       case 'D':
         lrs_printf("D%lu,%lu,\r\n", MIN_RFM_FREQUENCY, MAX_RFM_FREQUENCY);
         break;
+        
+      case 'S':
+          currentFrequency = startFreq;
+          currentSamples = 0;
+        break;
 
       case '#':
         nextIndex = 0;
@@ -204,8 +209,6 @@ void scannerMode(void)
           endFreq   = nextConfig[1] * 1000UL; // kHz -> Hz
           nrSamples = nextConfig[2]; // count
           stepSize  = nextConfig[3] * 1000UL;   // kHz -> Hz
-          currentFrequency = startFreq;
-          currentSamples = 0;
 
           // set IF filtter BW (kha)
           if (stepSize < 20000) {
