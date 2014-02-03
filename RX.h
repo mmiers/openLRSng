@@ -621,6 +621,7 @@ void setup()
     SerialBegin(Serial, 115200);
   } else if (rx_config.pinMapping[TXD_OUTPUT] == PINMAP_SBUS) {
     SerialBegin(Serial, 100000);
+    UCSR0C |= 1<<UPM01; // set even parity
   } else if ((bind_data.flags & TELEMETRY_MASK) == TELEMETRY_FRSKY) {
     SerialBegin(Serial, 9600);
   } else {
