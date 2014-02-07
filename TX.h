@@ -124,7 +124,7 @@ void bindMode(void)
       delay(50);
       if (RF_Mode == Received) {
         RF_Mode = Receive;
-        spiSendAddress(0x7f);   // Send the package read command
+        spiSendAddress(RFM2X_REG_FIFO_ACCESS);   // Send the package read command
         if ('B' == spiReadData()) {
           sendBinds = 0;
         }
@@ -506,7 +506,7 @@ void processChannelsFromSerial(uint8_t c)
 
 void loop(void)
 {
-  if (spiReadRegister(0x0C) == 0) {     // detect the locked module and reboot
+  if (spiReadRegister(RFM2X_REG_GPIO1_CFG) == 0) {     // detect the locked module and reboot
     Serial.println("module locked?");
     Red_LED_ON;
     init_rfm(0);
@@ -531,7 +531,7 @@ void loop(void)
     }
     linkQuality |= 1;
     RF_Mode = Receive;
-    spiSendAddress(0x7f); // Send the package read command
+    spiSendAddress(RFM2X_REG_FIFO_ACCESS); // Send the package read command
     for (int16_t i = 0; i < 9; i++) {
       rx_buf[i] = spiReadData();
     }

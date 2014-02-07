@@ -314,7 +314,7 @@ uint8_t bindReceive(uint32_t timeout)
   while ((!timeout) || ((millis() - start) < timeout)) {
     if (RF_Mode == Received) {
       Serial.println("Got pkt\n");
-      spiSendAddress(0x7f);   // Send the package read command
+      spiSendAddress(RFM2X_REG_FIFO_ACCESS);   // Send the package read command
       rxb = spiReadData();
       if (rxb == 'b') {
         for (uint8_t i = 0; i < sizeof(bind_data); i++) {
@@ -474,7 +474,7 @@ void slaveLoop()
       slaveState = 4; // in RX mode
     } else if (slaveState == 4) {
       if (RF_Mode == Received) {
-        spiSendAddress(0x7f);   // Send the package read command
+        spiSendAddress(RFM2X_REG_FIFO_ACCESS);   // Send the package read command
         for (int16_t i = 0; i < getPacketSize(&bind_data); i++) {
           rx_buf[i] = spiReadData();
         }
@@ -677,7 +677,7 @@ void loop()
 {
   uint32_t timeUs, timeMs;
 
-  if (spiReadRegister(0x0C) == 0) {     // detect the locked module and reboot
+  if (spiReadRegister(RFM2X_REG_GPIO1_CFG) == 0) {     // detect the locked module and reboot
     Serial.println("RX hang");
     init_rfm(0);
     to_rx_mode();
@@ -696,7 +696,7 @@ retry:
     uint32_t timeTemp = micros();
 
     if (RF_Mode == Received) {
-      spiSendAddress(0x7f);   // Send the package read command
+      spiSendAddress(RFM2X_REG_FIFO_ACCESS);   // Send the package read command
 
       for (int16_t i = 0; i < getPacketSize(&bind_data); i++) {
         rx_buf[i] = spiReadData();

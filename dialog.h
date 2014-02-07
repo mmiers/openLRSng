@@ -454,7 +454,7 @@ void handleRXmenu(char c)
       RF_Mode = Receive;
       delay(200);
       if (RF_Mode == Received) {
-        spiSendAddress(0x7f);   // Send the package read command
+        spiSendAddress(RFM2X_REG_FIFO_ACCESS);   // Send the package read command
         tx_buf[0] = spiReadData();
         if (tx_buf[0] == 'U') {
           Serial.println(F("*****************************"));
@@ -474,7 +474,7 @@ void handleRXmenu(char c)
       RF_Mode = Receive;
       delay(200);
       if (RF_Mode == Received) {
-        spiSendAddress(0x7f); // Send the package read command
+        spiSendAddress(RFM2X_REG_FIFO_ACCESS); // Send the package read command
         tx_buf[0] = spiReadData();
         for (uint8_t i = 0; i < sizeof(rx_config); i++) {
           tx_buf[i + 1] = spiReadData();
@@ -740,7 +740,7 @@ uint8_t rxcConnect()
     return 2;
   }
 
-  spiSendAddress(0x7f);   // Send the package read command
+  spiSendAddress(RFM2X_REG_FIFO_ACCESS);   // Send the package read command
   tx_buf[0] = spiReadData();
   if (tx_buf[0] != 'T') {
     return 3;
@@ -768,7 +768,7 @@ uint8_t rxcConnect()
   if (RF_Mode == Receive) {
     return 2;
   }
-  spiSendAddress(0x7f);   // Send the package read command
+  spiSendAddress(RFM2X_REG_FIFO_ACCESS);   // Send the package read command
   tx_buf[0] = spiReadData();
   if (tx_buf[0] != 'P') {
     return 3;
