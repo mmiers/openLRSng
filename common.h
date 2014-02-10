@@ -186,10 +186,10 @@ void scannerMode(void)
       case 'D':
         lrs_printf("D%lu,%lu,\r\n", MIN_RFM_FREQUENCY, MAX_RFM_FREQUENCY);
         break;
-        
+
       case 'S':
-          currentFrequency = startFreq;
-          currentSamples = 0;
+        currentFrequency = startFreq;
+        currentSamples = 0;
         break;
 
       case '#':
