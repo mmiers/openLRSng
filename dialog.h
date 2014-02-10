@@ -139,6 +139,11 @@ fail:
 }
 #endif
 
+void printYesNo(uint8_t yes)
+{
+  Serial.println(yes?"Yes":"No");
+}
+
 void bindPrint(void)
 {
 
@@ -189,13 +194,13 @@ void bindPrint(void)
   Serial.println(bind_data.serial_baudrate);
 
   Serial.print(F("0) Mute buzzer (mostly):"));
-  Serial.println((bind_data.flags & MUTE_TX) ? "Yes" : "No");
+  printYesNo(bind_data.flags & MUTE_TX);
 
   Serial.print(F("A) Inverted PPM in     :"));
-  Serial.println((bind_data.flags & INVERTED_PPMIN) ? "Yes" : "No");
+  printYesNo(bind_data.flags & INVERTED_PPMIN);
 
   Serial.print(F("B) Micro (half) PPM    :"));
-  Serial.println((bind_data.flags & MICROPPM) ? "Yes" : "No");
+  printYesNo(bind_data.flags & MICROPPM);
 
   Serial.print(F("C) MAVlink framing     :"));
   Serial.println((bind_data.flags & MAVLINK_FRAMING) ? "Yes" : "No");
@@ -276,11 +281,11 @@ void rxPrint(void)
   Serial.print(F("N) PPM output limited     : "));
   Serial.println((rx_config.flags & PPM_MAX_8CH) ? "8ch" : "N/A");
   Serial.print(F("O) Timed BIND at startup  : "));
-  Serial.println((rx_config.flags & ALWAYS_BIND) ? "Enabled" : "Disabled");
+  printYesNo(rx_config.flags & ALWAYS_BIND);
   Serial.print(F("P) Slave mode (experimental): "));
-  Serial.println((rx_config.flags & SLAVE_MODE) ? "Enabled" : "Disabled");
+  printYesNo(rx_config.flags & SLAVE_MODE);
   Serial.print(F("Q) Output before link (=FS) : "));
-  Serial.println((rx_config.flags & IMMEDIATE_OUTPUT) ? "Enabled" : "Disabled");
+  printYesNo(rx_config.flags & IMMEDIATE_OUTPUT);
 }
 
 void CLI_menu_headers(void)
@@ -832,7 +837,6 @@ void handleCLImenu(char c)
       break;
     case '\n':
     case '\r':
-      CLI_menu_headers();
       break;
     case '@':
 #ifdef HEXGET
@@ -840,7 +844,6 @@ void handleCLImenu(char c)
 #else
       Serial.println("NOT ENABLED");
 #endif
-      CLI_menu_headers();
       break;
     case 's':
     case 'S':
@@ -864,21 +867,16 @@ void handleCLImenu(char c)
       // restore factory settings
       bindInitDefaults();
       Serial.println("Loaded factory defaults\n");
-
-      CLI_menu_headers();
       break;
     case 'r':
     case 'R':
       // randomize channels and key
       bindRandomize();
       Serial.println("Key and channels randomized\n");
-
-      CLI_menu_headers();
       break;
     case 'f':
     case 'F':
       showFrequencies();
-      //CLI_menu_headers();
       break;
     case '1':
     case '2':
@@ -888,7 +886,6 @@ void handleCLImenu(char c)
     case '6':
     case '7':
       CLI_menu = c - '0';
-      CLI_menu_headers();
       break;
     case '8':
       Serial.println(F("Toggled telemetry!"));
@@ -898,31 +895,26 @@ void handleCLImenu(char c)
         bind_data.flags |= newf;
       }
       CLI_menu = -1;
-      CLI_menu_headers();
       break;
     case '9':
       CLI_menu = 9;
-      CLI_menu_headers();
       break;
     case '0':
       Serial.println(F("Toggled TX muting!"));
       bind_data.flags ^= MUTE_TX;
       CLI_menu = -1;
-      CLI_menu_headers();
       break;
     case 'a':
     case 'A':
       Serial.println(F("Toggled inverted PPM!"));
       bind_data.flags ^= INVERTED_PPMIN;
       CLI_menu = -1;
-      CLI_menu_headers();
       break;
     case 'b':
     case 'B':
       Serial.println(F("Toggled microPPM"));
       bind_data.flags ^= MICROPPM;
       CLI_menu = -1;
-      CLI_menu_headers();
       break;
     case 'c':
     case 'C':
@@ -947,8 +939,10 @@ void handleCLImenu(char c)
     case 'Z':
       CLI_RX_config();
       CLI_menu = -1;
-      CLI_menu_headers();
       break;
+    }
+    if (CLI_menu != -2) {
+      CLI_menu_headers();
     }
   } else { // we are inside the menu
     if (CLI_inline_edit(c)) {
