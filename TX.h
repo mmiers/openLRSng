@@ -24,9 +24,33 @@ uint16_t linkQualityRX = 0;
 
 volatile uint8_t ppmAge = 0; // age of PPM data
 
-volatile uint8_t ppmCounter = PPM_CHANNELS; // ignore data until first sync pulse
+volatile uint8_t ppmCounter = 255; // ignore data until first sync pulse
 
-uint8_t serialMode = 0; // 0 normal, 1 spektrum 1024 , 2 spektrum 2048, 3 SBUS
+uint8_t serialMode = 0; // 0 normal, 1 spektrum 1024 , 2 spektrum 2048, 3 SBUS, 4 SUMD
+
+struct sbus_help {
+  uint16_t ch0 : 11;
+  uint16_t ch1 : 11;
+  uint16_t ch2 : 11;
+  uint16_t ch3 : 11;
+  uint16_t ch4 : 11;
+  uint16_t ch5 : 11;
+  uint16_t ch6 : 11;
+  uint16_t ch7 : 11;
+} __attribute__ ((__packed__));
+
+struct sbus {
+  struct sbus_help ch[2];
+  uint8_t status;
+}  __attribute__ ((__packed__));
+
+// This is common temporary buffer used by all PPM input methods
+union ppm_msg {
+  uint8_t  bytes[32];
+  uint16_t words[16];
+  struct sbus sbus;
+} ppmWork;
+
 
 #ifndef BZ_FREQ
 #define BZ_FREQ 2000
@@ -47,12 +71,18 @@ static inline void processPulse(uint16_t pulse)
   }
 
   if (pulse > 2500) {      // Verify if this is the sync pulse (2.5ms)
+    if ((ppmCounter>5) && (ppmCounter!=255)) {
+      uint8_t i;
+      for (i=0; i < ppmCounter; i++) {
+        PPM[i] = ppmWork.words[i];
+      }
+      ppmAge = 0;                 // brand new PPM data received
+    }
     ppmCounter = 0;             // -> restart the channel counter
-    ppmAge = 0;                 // brand new PPM data received
   } else if ((pulse > 700) && (ppmCounter < PPM_CHANNELS)) { // extra channels will get ignored here
-    PPM[ppmCounter++] = servoUs2Bits(pulse);   // Store measured pulse length (converted)
+    ppmWork.words[ppmCounter++] = servoUs2Bits(pulse);   // Store measured pulse length (converted)
   } else {
-    ppmCounter = PPM_CHANNELS; // glitch ignore rest of data
+    ppmCounter = 255; // glitch ignore rest of data
   }
 }
 
@@ -336,9 +366,9 @@ void setup(void)
   delay(200);
   checkBND();
 
-  if (bind_data.serial_baudrate && (bind_data.serial_baudrate < 4)) {
+  if (bind_data.serial_baudrate && (bind_data.serial_baudrate < 5)) {
     serialMode = bind_data.serial_baudrate;
-    SerialBegin(TelemetrySerial, (serialMode == 3) ? 100000 : 115200);
+    SerialBegin(TelemetrySerial, (serialMode == 3) ? 100000 : 115200); // SBUS is 100000 rest 115200
   } else {
     // switch to userdefined baudrate here
     SerialBegin(TelemetrySerial, bind_data.serial_baudrate);
@@ -389,44 +419,18 @@ uint8_t compositeRSSI(uint8_t rssi, uint8_t linkq)
 
 #define SBUS_SYNC 0x0f
 #define SBUS_TAIL 0x00
-struct sbus_dat {
-  uint16_t ch0 : 11;
-  uint16_t ch1 : 11;
-  uint16_t ch2 : 11;
-  uint16_t ch3 : 11;
-  uint16_t ch4 : 11;
-  uint16_t ch5 : 11;
-  uint16_t ch6 : 11;
-  uint16_t ch7 : 11;
-  uint16_t ch8 : 11;
-  uint16_t ch9 : 11;
-  uint16_t ch10 : 11;
-  uint16_t ch11 : 11;
-  uint16_t ch12 : 11;
-  uint16_t ch13 : 11;
-  uint16_t ch14 : 11;
-  uint16_t ch15 : 11;
-  uint8_t  status;
-} __attribute__ ((__packed__));
-
-union serial_msg {
-  uint8_t  bytes[24];
-  uint16_t words[24];
-  struct sbus_dat sbus;
-} frame;
-
 #define SPKTRM_SYNC1 0x03
 #define SPKTRM_SYNC2 0x01
+#define SUMD_HEAD 0xa8
 
 uint8_t frameIndex=0;
 uint32_t srxLast=0;
+uint16_t srxCRC=0;
+uint8_t srxFlags=0;
+uint8_t srxChannels=0;
+
 void processSpektrum(uint8_t c)
 {
-  uint32_t now = micros();
-  if ((now - srxLast) > 5000) {
-    frameIndex=0;
-  }
-  srxLast=now;
   if (frameIndex == 0) {
     if (c == SPKTRM_SYNC1) {
       frameIndex++;
@@ -438,16 +442,16 @@ void processSpektrum(uint8_t c)
       frameIndex = 0;
     }
   } else if (frameIndex < 16) {
-    frame.bytes[frameIndex++] = c;
+    ppmWork.bytes[frameIndex++] = c;
     if (frameIndex==16) { // frameComplete
       for (uint8_t i=1; i<8; i++) {
         uint8_t ch,v;
         if (serialMode == 1) {
-          ch = frame.words[i] >> 10;
-          v = frame.words[i] & 0x3ff;
+          ch = ppmWork.words[i] >> 10;
+          v = ppmWork.words[i] & 0x3ff;
         } else {
-          ch = frame.words[i] >> 11;
-          v = (frame.words[i] & 0x7ff)>>1;
+          ch = ppmWork.words[i] >> 11;
+          v = (ppmWork.words[i] & 0x7ff)>>1;
         }
         if (ch<16) {
           PPM[ch] = v;
@@ -462,49 +466,98 @@ void processSpektrum(uint8_t c)
 
 void processSBUS(uint8_t c)
 {
-  uint32_t now = micros();
-  if ((now - srxLast) > 5000) {
-    frameIndex=0;
-  }
-  srxLast=now;
   if (frameIndex == 0) {
     if (c == SBUS_SYNC) {
       frameIndex++;
     }
   } else if (frameIndex < 24) {
-    frame.bytes[(frameIndex++)-1] = c;
+    ppmWork.bytes[(frameIndex++)-1] = c;
   } else {
-    if ((frameIndex == 24) && (c==SBUS_TAIL)) {
-      PPM[0] = frame.sbus.ch0>>1;
-      PPM[1] = frame.sbus.ch1>>1;
-      PPM[2] = frame.sbus.ch2>>1;
-      PPM[3] = frame.sbus.ch3>>1;
-      PPM[4] = frame.sbus.ch4>>1;
-      PPM[5] = frame.sbus.ch5>>1;
-      PPM[6] = frame.sbus.ch6>>1;
-      PPM[7] = frame.sbus.ch7>>1;
-      PPM[8] = frame.sbus.ch8>>1;
-      PPM[9] = frame.sbus.ch9>>1;
-      PPM[10] = frame.sbus.ch10>>1;
-      PPM[11] = frame.sbus.ch11>>1;
-      PPM[12] = frame.sbus.ch12>>1;
-      PPM[13] = frame.sbus.ch13>>1;
-      PPM[14] = frame.sbus.ch14>>1;
-      PPM[15] = frame.sbus.ch15>>1;
-      if ((frame.sbus.status & 0x08)==0) {
-	ppmAge=0;
+    if ((frameIndex == 24) && (c == SBUS_TAIL)) {
+      uint8_t set;
+      for (set = 0; set < 2; set++) {
+        PPM[(set<<3)] = ppmWork.sbus.ch[set].ch0 >> 1;
+        PPM[(set<<3)+1] = ppmWork.sbus.ch[set].ch1 >> 1;
+        PPM[(set<<3)+2] = ppmWork.sbus.ch[set].ch2 >> 1;
+        PPM[(set<<3)+3] = ppmWork.sbus.ch[set].ch3 >> 1;
+        PPM[(set<<3)+4] = ppmWork.sbus.ch[set].ch4 >> 1;
+        PPM[(set<<3)+5] = ppmWork.sbus.ch[set].ch5 >> 1;
+        PPM[(set<<3)+6] = ppmWork.sbus.ch[set].ch6 >> 1;
+        PPM[(set<<3)+7] = ppmWork.sbus.ch[set].ch7 >> 1;
+      }
+      if ((ppmWork.sbus.status & 0x08)==0) {
+        ppmAge=0;
       }
     }
     frameIndex = 0;
   }
 }
 
+void sumdCRC16(uint8_t c)
+{
+  uint8_t i;
+  srxCRC ^= (uint16_t)c<<8;
+  for (i = 0; i < 8; i++) {
+    if (srxCRC & 0x8000) {
+      srxCRC = (srxCRC << 1) ^ 0x1021;
+    } else {
+      srxCRC = (srxCRC << 1);
+    }
+  }
+}
+
+void processSUMD(uint8_t c)
+{
+  if ((frameIndex == 0) && (c == SUMD_HEAD)) {
+    srxCRC=0;
+    sumdCRC16(c);
+    frameIndex=1;
+  } else if (frameIndex == 1) {
+    srxFlags = c;
+    sumdCRC16(c);
+  } else if (frameIndex == 2) {
+    srxChannels = c;
+    sumdCRC16(c);
+  } else if (frameIndex < (3 + (srxChannels << 1))) {
+    if (frameIndex < 35) {
+      ppmWork.bytes[frameIndex-3] = c;
+    }
+    sumdCRC16(c);
+  } else if (frameIndex == (3 + (srxChannels << 1))) {
+    srxCRC ^= (uint16_t)c << 8;
+  } else {
+    if ((srxCRC == c) && (srxFlags == 0x01)) {
+      uint8_t ch;
+      if (srxChannels > 16) {
+        srxChannels = 16;
+      }
+      for (ch = 0; ch < srxChannels; ch++) {
+        PPM[ch] = servoUs2Bits(ppmWork.words[ch] >> 3);
+      }
+      ppmAge = 0;
+    }
+    frameIndex = 0;
+  }
+
+  if (frameIndex > 1) {
+    frameIndex++;
+  }
+}
+
 void processChannelsFromSerial(uint8_t c)
 {
+  uint32_t now = micros();
+  if ((now - srxLast) > 5000) {
+    frameIndex=0;
+  }
+  srxLast=now;
+
   if ((serialMode == 1) || (serialMode == 2)) { // SPEKTRUM
     processSpektrum(c);
   } else if (serialMode==3) { // SBUS
     processSBUS(c);
+  } else if (serialMode==4) { // SUMD
+    processSUMD(c);
   }
 }
 
@@ -677,7 +730,7 @@ void loop(void)
         RF_channel = 0;
       }
 
-     } else {
+    } else {
       if (ppmAge == 8) {
         Red_LED_ON
       }
