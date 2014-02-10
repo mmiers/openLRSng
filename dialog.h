@@ -136,6 +136,12 @@ fail:
 }
 #endif
 
+void printYesNo(uint8_t yes)
+{
+  if (yes) lrs_puts("Yes");
+  else lrs_puts("No");
+}
+
 void bindPrint(void)
 {
 
@@ -172,9 +178,9 @@ void bindPrint(void)
   }
 
   lrs_printf("9) Serial baudrate:      %ld\r\n", bind_data.serial_baudrate);
-  lrs_printf("0) Mute buzzer (mostly): %s\r\n", (bind_data.flags & MUTE_TX) ? "Yes" : "No");
-  lrs_printf("A) Inverted PPM in:      %s\r\n", (bind_data.flags & INVERTED_PPMIN) ? "Yes" : "No");
-  lrs_printf("B) Micro (half) PPM:     %s\r\n", (bind_data.flags & MICROPPM) ? "Yes" : "No");
+  lrs_printf("0) Mute buzzer (mostly): "); printYesNo(bind_data.flags & MUTE_TX);
+  lrs_printf("A) Inverted PPM in:      "); printYesNo(bind_data.flags & INVERTED_PPMIN);
+  lrs_printf("B) Micro (half) PPM:     "); printYesNo(bind_data.flags & MICROPPM);
   lrs_printf("Calculated packet interval: %lu == %lu Hz\r\n",
              getInterval(&bind_data), 1000000L / getInterval(&bind_data));
 }
@@ -228,9 +234,9 @@ void rxPrint(void)
     lrs_puts("DISABLED");
   }
   lrs_printf("N) PPM output limited       : %s\r\n", (rx_config.flags & PPM_MAX_8CH) ? "8ch" : "N/A");
-  lrs_printf("O) Timed BIND at startup    : %s\r\n", (rx_config.flags & ALWAYS_BIND) ? "Enabled" : "Disabled");
-  lrs_printf("P) Slave mode (experimental): %s\r\n", (rx_config.flags & SLAVE_MODE) ? "Enabled" : "Disabled");
-  lrs_printf("Q) Output before link (=FS) : %s\r\n", (rx_config.flags & IMMEDIATE_OUTPUT) ? "Enabled" : "Disabled");
+  lrs_printf("O) Timed BIND at startup    : "); printYesNo(rx_config.flags & ALWAYS_BIND);
+  lrs_printf("P) Slave mode (experimental): "); printYesNo(rx_config.flags & SLAVE_MODE);
+  lrs_printf("Q) Output before link (=FS) : "); printYesNo(rx_config.flags & IMMEDIATE_OUTPUT);
 }
 
 void CLI_menu_headers(void)
@@ -771,7 +777,6 @@ void handleCLImenu(char c)
       break;
     case '\n':
     case '\r':
-      CLI_menu_headers();
       break;
     case '@':
 #ifdef HEXGET
@@ -779,7 +784,6 @@ void handleCLImenu(char c)
 #else
       lrs_puts("NOT ENABLED");
 #endif
-      CLI_menu_headers();
       break;
     case 's':
     case 'S':
@@ -803,21 +807,16 @@ void handleCLImenu(char c)
       // restore factory settings
       bindInitDefaults();
       lrs_puts("Loaded factory defaults");
-
-      CLI_menu_headers();
       break;
     case 'r':
     case 'R':
       // randomize channels and key
       bindRandomize();
       lrs_puts("Key and channels randomized");
-
-      CLI_menu_headers();
       break;
     case 'f':
     case 'F':
       showFrequencies();
-      //CLI_menu_headers();
       break;
     case '1':
     case '2':
@@ -827,7 +826,6 @@ void handleCLImenu(char c)
     case '6':
     case '7':
       CLI_menu = c - '0';
-      CLI_menu_headers();
       break;
     case '8':
       lrs_puts("Toggled telemetry!");
@@ -837,38 +835,35 @@ void handleCLImenu(char c)
         bind_data.flags |= newf;
       }
       CLI_menu = -1;
-      CLI_menu_headers();
       break;
     case '9':
       CLI_menu = 9;
-      CLI_menu_headers();
       break;
     case '0':
       lrs_puts("Toggled TX muting!");
       bind_data.flags ^= MUTE_TX;
       CLI_menu = -1;
-      CLI_menu_headers();
       break;
     case 'a':
     case 'A':
       lrs_puts("Toggled inverted PPM!");
       bind_data.flags ^= INVERTED_PPMIN;
       CLI_menu = -1;
-      CLI_menu_headers();
       break;
     case 'b':
     case 'B':
       lrs_puts("Toggled microPPM");
       bind_data.flags ^= MICROPPM;
       CLI_menu = -1;
-      CLI_menu_headers();
       break;
     case 'z':
     case 'Z':
       CLI_RX_config();
       CLI_menu = -1;
-      CLI_menu_headers();
       break;
+    }
+    if (CLI_menu != -2) {
+      CLI_menu_headers();
     }
   } else { // we are inside the menu
     if (CLI_inline_edit(c)) {
