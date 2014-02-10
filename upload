@@ -1,0 +1,34 @@
+#!/bin/bash
+
+#
+# Put your upload TTY device here
+#
+TTY=${2-/dev/ttyUSB0}
+
+#
+# Put the upload speed here
+#
+BAUD=${3-57600}
+
+#
+# CPU type here
+#
+CPU=${4-atmega328p}
+
+#
+# Arduino location (no default)
+#
+ARDUINO_PATH=/usr/share/arduino
+
+#
+# upload options
+#
+AVRDUDE=${ARDUINO_PATH}/hardware/tools/avrdude
+AVRDUDECONF=${ARDUINO_PATH}/hardware/tools/avrdude.conf
+AVRDUDEFLAGS="-v -v -p${CPU} -carduino -P${TTY} -b${BAUD}"
+
+#
+# upload the hex file.
+#
+exec ${AVRDUDE} -C${AVRDUDECONF} ${AVRDUDEFLAGS} -D -Uflash:w:${1-openLRSng.hex}:i
+
