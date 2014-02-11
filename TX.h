@@ -142,6 +142,8 @@ void bindMode(void)
     SerialRead(Serial);    // flush serial
   }
 
+  Red_LED_OFF;
+  
   while (1) {
     if (sendBinds & (millis() - prevsend > 200)) {
       prevsend = millis();
@@ -169,6 +171,8 @@ void bindMode(void)
     }
 
     while (SerialAvailable(Serial)) {
+      Red_LED_ON;
+      Green_LED_ON;
       switch (SerialRead(Serial)) {
       case '\n':
       case '\r':
@@ -184,6 +188,8 @@ void bindMode(void)
       default:
         break;
       }
+      Red_LED_OFF;
+      Green_LED_OFF;
     }
   }
 }
