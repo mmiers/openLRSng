@@ -584,11 +584,7 @@ void loop(void)
     }
     linkQuality |= 1;
     RF_Mode = Receive;
-    spiSendAddress(RFM2X_REG_FIFO_ACCESS); // Send the package read command
-    for (int16_t i = 0; i < 9; i++) {
-      rx_buf[i] = spiReadData();
-    }
-
+    rx_packet(rx_buf, 9);
     if ((tx_buf[0] ^ rx_buf[0]) & 0x40) {
       tx_buf[0] ^= 0x40; // swap sequence to ack
       if ((rx_buf[0] & 0x38) == 0x38) {

@@ -239,8 +239,7 @@ public:
         delay(200);
 
         if (RF_Mode == Received) {
-          spiSendAddress(RFM2X_REG_FIFO_ACCESS); // Send the package read command
-          tx_buf[0] = spiReadData();
+          rx_packet(tx_buf, 1);
           if (tx_buf[0]=='U') {
             serialize_uint8(0x01); // success
           } else {
@@ -270,13 +269,7 @@ public:
       delay(200);
 
       if (RF_Mode == Received) {
-        spiSendAddress(RFM2X_REG_FIFO_ACCESS);   // Send the package read command
-        tx_buf[0] = spiReadData();
-
-        for (uint8_t i = 0; i < sizeof(rx_config); i++) {
-          tx_buf[i + 1] = spiReadData();
-        }
-
+        rx_packet(tx_buf, 1 + sizeof(rx_config));
         memcpy(&rx_config, tx_buf + 1, sizeof(rx_config));
 
         if (tx_buf[0] == 'I') {

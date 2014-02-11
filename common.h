@@ -595,6 +595,43 @@ uint8_t tx_done()
   return 0;
 }
 
+uint8_t rx_length()
+{
+  return spiReadRegister(RFM2X_REG_RCVD_PKT_LEN);
+}
+
+uint8_t rx_packet_simple(uint8_t *pkt, uint8_t size)
+{
+  spiSendAddress(RFM2X_REG_FIFO_ACCESS); // Send the package read command
+  for (int16_t i = 0; i < size; i++) {
+    pkt[i] = spiReadData();
+  }
+
+  return size;
+}
+
+uint8_t rx_packet_more(uint8_t *pkt, uint8_t size)
+{
+  for (int16_t i = 0; i < size; i++) {
+    pkt[i] = spiReadData();
+  }
+
+  return size;
+}
+
+// Returns the number of bytes read from the FIFO, which may mean
+// some remain.
+uint8_t rx_packet(uint8_t* pkt, uint8_t size)
+{
+  register uint8_t rd;
+
+  rd = rx_length();
+  if (size > rd)
+    size = rd;
+
+  return rx_packet_simple(pkt, size);
+}
+
 void beacon_tone(int16_t hz, int16_t len) //duration is now in half seconds.
 {
   int16_t d = 500000 / hz; // better resolution

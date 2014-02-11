@@ -314,12 +314,9 @@ uint8_t bindReceive(uint32_t timeout)
   while ((!timeout) || ((millis() - start) < timeout)) {
     if (RF_Mode == Received) {
       Serial.println("Got pkt\n");
-      spiSendAddress(RFM2X_REG_FIFO_ACCESS);   // Send the package read command
-      rxb = spiReadData();
+      rx_packet_simple((uint8_t *)&rxb, 1);
       if (rxb == 'b') {
-        for (uint8_t i = 0; i < sizeof(bind_data); i++) {
-          *(((uint8_t*) &bind_data) + i) = spiReadData();
-        }
+        rx_packet_more((uint8_t *)&bind_data, sizeof(bind_data));
 
         if (bind_data.version == BINDING_VERSION) {
           Serial.println("data good\n");
@@ -350,9 +347,7 @@ uint8_t bindReceive(uint32_t timeout)
         memcpy(rxc_buf + 5, &rxSpecialPins, sizeof(rxSpecialPins));
         tx_packet(rxc_buf, sizeof(rxSpecialPins) + 5);
       } else if (rxb == 'u') {
-        for (uint8_t i = 0; i < sizeof(rx_config); i++) {
-          *(((uint8_t*) &rx_config) + i) = spiReadData();
-        }
+        rx_packet_more((uint8_t *)&rx_config, sizeof(rx_config));
         rxWriteEeprom();
         rxb = 'U';
         tx_packet(&rxb, 1); // ACK that we updated settings
@@ -474,10 +469,7 @@ void slaveLoop()
       slaveState = 4; // in RX mode
     } else if (slaveState == 4) {
       if (RF_Mode == Received) {
-        spiSendAddress(RFM2X_REG_FIFO_ACCESS);   // Send the package read command
-        for (int16_t i = 0; i < getPacketSize(&bind_data); i++) {
-          rx_buf[i] = spiReadData();
-        }
+        rx_packet(rx_buf, getPacketSize(&bind_data));
         slaveState = 5;
         Green_LED_ON;
       }
@@ -700,11 +692,7 @@ retry:
     uint32_t timeTemp = micros();
 
     if (RF_Mode == Received) {
-      spiSendAddress(RFM2X_REG_FIFO_ACCESS);   // Send the package read command
-
-      for (int16_t i = 0; i < getPacketSize(&bind_data); i++) {
-        rx_buf[i] = spiReadData();
-      }
+      rx_packet(rx_buf, getPacketSize(&bind_data));
 
       lastAFCCvalue = rfmGetAFCC();
     } else {
