@@ -619,30 +619,21 @@ uint8_t rx_packet_more(uint8_t *pkt, uint8_t size)
   return size;
 }
 
-// Returns the number of bytes read from the FIFO, which may mean
-// some remain.
+// Returns the number of bytes remaining after the read
 uint8_t rx_packet(uint8_t* pkt, uint8_t size)
 {
-  register uint8_t rd, ret;
+  register uint8_t ready;
 
   // get packet len
-  rd = rx_length();
-  // If we asked to read more than len, don't
-  if (size > rd)
-    size = rd;
+  ready = rx_length();
+
+  // If we were asked to read more than len, don't do it
+  // however, we MAY have been asked to read fewer bytes.
+  if (size > ready)
+    size = ready;
 
   // read packet bytes
-  ret = rx_packet_simple(pkt, size);
-
-  // if we asked to read less than packet len,
-  // discard extra bytes to next packet
-  // NOTE: the other rx APIs do NOT do this.
-  while (size < rd) {
-    spiReadData();
-    size++;
-  }
-
-  return ret;
+  return rx_packet_simple(pkt, size);
 }
 
 void beacon_tone(int16_t hz, int16_t len) //duration is now in half seconds.
