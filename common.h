@@ -623,13 +623,26 @@ uint8_t rx_packet_more(uint8_t *pkt, uint8_t size)
 // some remain.
 uint8_t rx_packet(uint8_t* pkt, uint8_t size)
 {
-  register uint8_t rd;
+  register uint8_t rd, ret;
 
+  // get packet len
   rd = rx_length();
+  // If we asked to read more than len, don't
   if (size > rd)
     size = rd;
 
-  return rx_packet_simple(pkt, size);
+  // read packet bytes
+  ret = rx_packet_simple(pkt, size);
+
+  // if we asked to read less than packet len,
+  // discard extra bytes to next packet
+  // NOTE: the other rx APIs do NOT do this.
+  while (size < rd) {
+    spiReadData();
+    size++;
+  }
+
+  return ret;
 }
 
 void beacon_tone(int16_t hz, int16_t len) //duration is now in half seconds.
