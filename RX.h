@@ -600,7 +600,8 @@ void setup()
     reinitSlave();
   }
 
-  if (rx_config.pinMapping[TXD_OUTPUT] == PINMAP_SPKTRM) {
+  if ((rx_config.pinMapping[TXD_OUTPUT] == PINMAP_SPKTRM) ||
+      (rx_config.pinMapping[TXD_OUTPUT] == PINMAP_SUMD)) {
     Serial.begin(115200);
   } else if (rx_config.pinMapping[TXD_OUTPUT] == PINMAP_SBUS) {
     Serial.begin(100000);
@@ -915,6 +916,8 @@ retry:
       sendSpektrumFrame();
     } else if (rx_config.pinMapping[TXD_OUTPUT] == PINMAP_SBUS) {
       sendSBUSFrame(failsafeActive, numberOfLostPackets);
+    } else if (rx_config.pinMapping[TXD_OUTPUT] == PINMAP_SUMD) {
+      sendSUMDFrame(failsafeActive);
     }
   }
 
