@@ -54,7 +54,7 @@ struct rxSpecialPinMap {
 #ifdef COMPILE_TX
 // Needed by dialog code
 static const char *specialStrs[] = { "PPM","RSSI","SDA","SCL","RXD","TXD","AIN","LBEEP",
-                                     "SPKTRM", "SBUS", "LLIND", "", "", "", "", ""
+                                     "SPKTRM", "SBUS", "SUMD", "LLIND", "", "", "", ""
                                    };
 #define SPECIALSTR(x) (specialStrs[(x)&0x0f]) // note must be changed if not 16 strings
 #endif
@@ -398,6 +398,7 @@ struct rxSpecialPinMap rxSpecialPins[] = {
   { 12, PINMAP_TXD},
   { 12, PINMAP_SPKTRM},
   { 12, PINMAP_SBUS},
+  { 12, PINMAP_SUMD},
 };
 
 #endif
@@ -652,6 +653,7 @@ struct rxSpecialPinMap rxSpecialPins[] = {
   { 7, PINMAP_TXD},
   { 7, PINMAP_SPKTRM},
   { 7, PINMAP_SBUS},
+  { 7, PINMAP_SUMD},
 };
 
 #endif
