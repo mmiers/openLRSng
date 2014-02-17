@@ -212,8 +212,12 @@ void rxPrint(void)
   for (i=0; i < rxcNumberOfOutputs; i++) {
     lrs_putc((char)(((i + 1) > 9) ? (i + 'A' - 9) : (i + '1')));
     lrs_printf(") port %d function: ", i + 1);
-    if (rx_config.pinMapping[i] < 16) {
-      lrs_printf("PWM channel %d\r\n", rx_config.pinMapping[i] + 1);
+    if (rx_config.pinMapping[i] < 32) {
+      lrs_printf("PWM channel ");
+      if (rx_config.pinMapping[i] > 15) {
+        lrs_printf("S");
+      }
+      lrs_printf("%d\r\n", (rx_config.pinMapping[i] & 0x0f) + 1);
     } else {
       lrs_printf("%s\r\n", SPECIALSTR(rx_config.pinMapping[i]));
     }
@@ -315,7 +319,7 @@ void RX_menu_headers(void)
     if ((CLI_menu > 0) && (CLI_menu <= rxcNumberOfOutputs)) {
       lrs_printf("Set output for port %hd\r\n", CLI_menu);
       lrs_printf("Valid choices are: [1]-[16] (channel 1-16)");
-      ch=20;
+      ch=40;
       for (uint8_t i = 0; i < rxcSpecialPinCount; i++) {
         if (rxcSpecialPins[i].output == CLI_menu - 1) {
           lrs_printf(", [%hu] (%s)", ch, SPECIALSTR(rxcSpecialPins[i].type));
@@ -584,11 +588,11 @@ void handleRXmenu(char c)
           if (CLI_menu > rxcNumberOfOutputs) {
             break;
           }
-          if ((value > 0) && (value <= 16)) {
+          if ((value > 0) && (value <= 32)) {
             rx_config.pinMapping[CLI_menu - 1] = value - 1;
             valid_input = 1;
           } else {
-            ch=20;
+            ch=40;
             for (uint8_t i = 0; i < rxcSpecialPinCount; i++) {
               if (rxcSpecialPins[i].output != (CLI_menu - 1)) {
                 continue;

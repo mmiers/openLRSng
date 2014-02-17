@@ -316,6 +316,18 @@ void updateLBeep(bool packetLost)
   }
 }
 
+void updateSwitches()
+{
+  uint8_t i;
+  for (i = 0; i < OUTPUTS; i++) {
+    uint8_t map = rx_config.pinMapping[i];
+    if ((map & 0x10) == 0x10) { // 16-31
+      digitalWrite(i, (PPM[map & 0x0f] > 255) ? HIGH : LOW);
+    }
+  }
+}
+
+
 uint8_t bindReceive(uint32_t timeout)
 {
   uint32_t start = millis();
@@ -554,6 +566,8 @@ void setup()
 
   if (checkIfConnected(OUTPUT_PIN[2], OUTPUT_PIN[3])) { // ch1 - ch2 --> force scannerMode
     while (1) {
+      Red_LED_OFF;
+      Green_LED_OFF;
       scannerMode();
     }
   }
@@ -870,6 +884,7 @@ retry:
         checkSerial();
       }
 #endif
+      updateSwitches();
     }
 
     RF_Mode = Receive;
