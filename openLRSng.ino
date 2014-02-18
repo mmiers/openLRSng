@@ -74,6 +74,7 @@
 #include <Arduino.h>
 
 #include "version.h"
+#include "rfm2x.h"
 #include "hardware.h"
 #include "binding.h"
 #include "common.h"

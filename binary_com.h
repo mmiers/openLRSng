@@ -250,9 +250,10 @@ void PSP_process_data(BinaryPSP *psp)
       delay(200);
 
       if (RF_Mode == Received) {
-        spiSendAddress(0x7f); // Send the package read command
-        tx_buf[0] = spiReadData();
-        if (tx_buf[0]=='U') {
+        rx_packet(tx_buf, 1 + sizeof(rx_config));
+        memcpy(&rx_config, tx_buf + 1, sizeof(rx_config));
+
+        if (tx_buf[0] == 'U') {
           PSP_serialize_uint8(psp, 0x01); // success
         } else {
           PSP_serialize_uint8(psp, 0x00); // fail

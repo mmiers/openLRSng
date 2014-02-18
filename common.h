@@ -234,21 +234,21 @@ void scannerMode(void)
 
           // set IF filtter BW (kha)
           if (stepSize < 20000) {
-            spiWriteRegister(0x1c, 0x32);   // 10.6kHz
+            spiWriteRegister(RFM2X_REG_IF_FILT_BW, 0x32);   // 10.6kHz
           } else if (stepSize < 30000) {
-            spiWriteRegister(0x1c, 0x22);   // 21.0kHz
+            spiWriteRegister(RFM2X_REG_IF_FILT_BW, 0x22);   // 21.0kHz
           } else if (stepSize < 40000) {
-            spiWriteRegister(0x1c, 0x26);   // 32.2kHz
+            spiWriteRegister(RFM2X_REG_IF_FILT_BW, 0x26);   // 32.2kHz
           } else if (stepSize < 50000) {
-            spiWriteRegister(0x1c, 0x12);   // 41.7kHz
+            spiWriteRegister(RFM2X_REG_IF_FILT_BW, 0x12);   // 41.7kHz
           } else if (stepSize < 60000) {
-            spiWriteRegister(0x1c, 0x15);   // 56.2kHz
+            spiWriteRegister(RFM2X_REG_IF_FILT_BW, 0x15);   // 56.2kHz
           } else if (stepSize < 70000) {
-            spiWriteRegister(0x1c, 0x01);   // 75.2kHz
+            spiWriteRegister(RFM2X_REG_IF_FILT_BW, 0x01);   // 75.2kHz
           } else if (stepSize < 100000) {
-            spiWriteRegister(0x1c, 0x03);   // 90.0kHz
+            spiWriteRegister(RFM2X_REG_IF_FILT_BW, 0x03);   // 90.0kHz
           } else {
-            spiWriteRegister(0x1c, 0x05);   // 112.1kHz
+            spiWriteRegister(RFM2X_REG_IF_FILT_BW, 0x05);   // 112.1kHz
           }
         }
 
@@ -425,39 +425,39 @@ void spiWriteRegister(uint8_t address, uint8_t data)
 void rfmSetChannel(uint8_t ch)
 {
   uint8_t magicLSB = (bind_data.rf_magic & 0xff) ^ ch;
-  spiWriteRegister(0x79, bind_data.hopchannel[ch]);
-  spiWriteRegister(0x3a + 3, magicLSB);
-  spiWriteRegister(0x3f + 3, magicLSB);
+  spiWriteRegister(RFM2X_REG_FREQ_HOP_CH_SEL,    bind_data.hopchannel[ch]);
+  spiWriteRegister(RFM2X_REG_TRANSMIT_HDR_3 + 3, magicLSB);
+  spiWriteRegister(RFM2X_REG_CHECK_HDR_3 + 3,    magicLSB);
 }
 
 uint8_t rfmGetRSSI(void)
 {
-  return spiReadRegister(0x26);
+  return spiReadRegister(RFM2X_REG_RSSI);
 }
 
 uint16_t rfmGetAFCC(void)
 {
-  return (((uint16_t)spiReadRegister(0x2B) << 2) | ((uint16_t)spiReadRegister(0x2C) >> 6));
+  return (((uint16_t)spiReadRegister(RFM2X_REG_AFC_CORR_READ) << 2) | ((uint16_t)spiReadRegister(RFM2X_REG_OOK_CTR_VAL_1) >> 6));
 }
 
 void setModemRegs(struct rfm22_modem_regs* r)
 {
 
-  spiWriteRegister(0x1c, r->r_1c);
-  spiWriteRegister(0x1d, r->r_1d);
-  spiWriteRegister(0x1e, r->r_1e);
-  spiWriteRegister(0x20, r->r_20);
-  spiWriteRegister(0x21, r->r_21);
-  spiWriteRegister(0x22, r->r_22);
-  spiWriteRegister(0x23, r->r_23);
-  spiWriteRegister(0x24, r->r_24);
-  spiWriteRegister(0x25, r->r_25);
-  spiWriteRegister(0x2a, r->r_2a);
-  spiWriteRegister(0x6e, r->r_6e);
-  spiWriteRegister(0x6f, r->r_6f);
-  spiWriteRegister(0x70, r->r_70);
-  spiWriteRegister(0x71, r->r_71);
-  spiWriteRegister(0x72, r->r_72);
+  spiWriteRegister(RFM2X_REG_IF_FILT_BW,         r->r_1c);
+  spiWriteRegister(RFM2X_REG_AFC_LOOP_GEAR,      r->r_1d);
+  spiWriteRegister(RFM2X_REG_AFC_TIME_CTRL,      r->r_1e);
+  spiWriteRegister(RFM2X_REG_CLK_RECOV_OVER_RAT, r->r_20);
+  spiWriteRegister(RFM2X_REG_CLK_RECOV_OFF_2,    r->r_21);
+  spiWriteRegister(RFM2X_REG_CLK_RECOV_OFF_1,    r->r_22);
+  spiWriteRegister(RFM2X_REG_CLK_RECOV_OFF_0,    r->r_23);
+  spiWriteRegister(RFM2X_REG_CLK_RECOV_TLG_1,    r->r_24);
+  spiWriteRegister(RFM2X_REG_CLK_RECOV_TLG_0,    r->r_25);
+  spiWriteRegister(RFM2X_REG_AFC_LIMITER,        r->r_2a);
+  spiWriteRegister(RFM2X_REG_TX_DATA_RATE_1,     r->r_6e);
+  spiWriteRegister(RFM2X_REG_TX_DATA_RATE_2,     r->r_6f);
+  spiWriteRegister(RFM2X_REG_MOD_MODE_CTRL_1,    r->r_70);
+  spiWriteRegister(RFM2X_REG_MOD_MODE_CTRL_2,    r->r_71);
+  spiWriteRegister(RFM2X_REG_FREQ_DEV,           r->r_72);
 }
 
 void rfmSetCarrierFrequency(uint32_t f)
@@ -472,28 +472,28 @@ void rfmSetCarrierFrequency(uint32_t f)
     fb = f / 20000000 - 24;
     fc = (f - (fb + 24) * 20000000) * 2 / 625;
   }
-  spiWriteRegister(0x75, 0x40 + (hbsel ? 0x20 : 0) + (fb & 0x1f));
-  spiWriteRegister(0x76, (fc >> 8));
-  spiWriteRegister(0x77, (fc & 0xff));
+  spiWriteRegister(RFM2X_REG_FREQ_BAND_SEL, 0x40 + (hbsel ? 0x20 : 0) + (fb & 0x1f));
+  spiWriteRegister(RFM2X_REG_NOM_CAR_FREQ_1, (fc >> 8));
+  spiWriteRegister(RFM2X_REG_NOM_CAR_FREQ_2, (fc & 0xff));
 }
 
 void init_rfm(uint8_t isbind)
 {
-  ItStatus1 = spiReadRegister(0x03);   // read status, clear interrupt
-  ItStatus2 = spiReadRegister(0x04);
-  spiWriteRegister(0x06, 0x00);    // disable interrupts
-  spiWriteRegister(0x07, RF22B_PWRSTATE_READY); // disable lbd, wakeup timer, use internal 32768,xton = 1; in ready mode
-  spiWriteRegister(0x09, 0x7f);   // c = 12.5p
-  spiWriteRegister(0x0a, 0x05);
+  ItStatus1 = spiReadRegister(RFM2X_REG_INT_STAT_1);   // read status, clear interrupt
+  ItStatus2 = spiReadRegister(RFM2X_REG_INT_STAT_2);
+  spiWriteRegister(RFM2X_REG_INT_EN_2,       0x00);    // disable interrupts
+  spiWriteRegister(RFM2X_REG_OP_FUNC_CTRL_1, RF22B_PWRSTATE_READY); // disable lbd, wakeup timer, use internal 32768,xton = 1; in ready mode
+  spiWriteRegister(RFM2X_REG_OSC_LOAD_CAP,   0x7f);   // c = 12.5p
+  spiWriteRegister(RFM2X_REG_MIC_OUTPUT_CLK, 0x05);
 #ifdef SWAP_GPIOS
-  spiWriteRegister(0x0b, 0x15);    // gpio0 RX State
-  spiWriteRegister(0x0c, 0x12);    // gpio1 TX State
+  spiWriteRegister(RFM2X_REG_GPIO0_CFG,      0x15);    // gpio0 RX State
+  spiWriteRegister(RFM2X_REG_GPIO1_CFG,      0x12);    // gpio1 TX State
 #else
-  spiWriteRegister(0x0b, 0x12);    // gpio0 TX State
-  spiWriteRegister(0x0c, 0x15);    // gpio1 RX State
+  spiWriteRegister(RFM2X_REG_GPIO0_CFG,      0x12);    // gpio0 TX State
+  spiWriteRegister(RFM2X_REG_GPIO1_CFG,      0x15);    // gpio1 RX State
 #endif
-  spiWriteRegister(0x0d, 0xfd);    // gpio 2 micro-controller clk output
-  spiWriteRegister(0x0e, 0x00);    // gpio    0, 1,2 NO OTHER FUNCTION.
+  spiWriteRegister(RFM2X_REG_GPIO2_CFG,      0xfd);    // gpio 2 micro-controller clk output
+  spiWriteRegister(RFM2X_REG_IO_PORT_CFG,    0x00);    // gpio    0, 1,2 NO OTHER FUNCTION.
 
   if (isbind) {
     setModemRegs(&bind_params);
@@ -502,40 +502,40 @@ void init_rfm(uint8_t isbind)
   }
 
   // Packet settings
-  spiWriteRegister(0x30, 0x8c);    // enable packet handler, msb first, enable crc,
-  spiWriteRegister(0x32, 0x0f);    // no broadcast, check header bytes 3,2,1,0
-  spiWriteRegister(0x33, 0x42);    // 4 byte header, 2 byte synch, variable pkt size
-  spiWriteRegister(0x34, 0x0a);    // 10 nibbles (40 bit preamble)
-  spiWriteRegister(0x35, 0x2a);    // preath = 5 (20bits), rssioff = 2
-  spiWriteRegister(0x36, 0x2d);    // synchronize word 3
-  spiWriteRegister(0x37, 0xd4);    // synchronize word 2
-  spiWriteRegister(0x38, 0x00);    // synch word 1 (not used)
-  spiWriteRegister(0x39, 0x00);    // synch word 0 (not used)
+  spiWriteRegister(RFM2X_REG_DATA_ACC_CTRL,  0x8c);    // enable packet handler, msb first, enable crc,
+  spiWriteRegister(RFM2X_REG_HEADER_CTRL_1,  0x0f);    // no broadcast, check header bytes 3,2,1,0
+  spiWriteRegister(RFM2X_REG_HEADER_CTRL_2,  0x42);    // 4 byte header, 2 byte synch, variable pkt size
+  spiWriteRegister(RFM2X_REG_PREAMBLE_LEN,   0x0a);    // 10 nibbles (40 bit preamble)
+  spiWriteRegister(RFM2X_REG_PREAMBLE_DET_CTRL, 0x2a);    // preath = 5 (20bits), rssioff = 2
+  spiWriteRegister(RFM2X_REG_SYNC_WORD_3,    0x2d);    // synchronize word 3
+  spiWriteRegister(RFM2X_REG_SYNC_WORD_2,    0xd4);    // synchronize word 2
+  spiWriteRegister(RFM2X_REG_SYNC_WORD_1,    0x00);    // synch word 1 (not used)
+  spiWriteRegister(RFM2X_REG_SYNC_WORD_0,    0x00);    // synch word 0 (not used)
 
   uint32_t magic = isbind ? BIND_MAGIC : bind_data.rf_magic;
   for (uint8_t i = 0; i < 4; i++) {
-    spiWriteRegister(0x3a + i, (magic >> 24) & 0xff);   // tx header
-    spiWriteRegister(0x3f + i, (magic >> 24) & 0xff);   // rx header
+    spiWriteRegister(RFM2X_REG_TRANSMIT_HDR_3 + i, (magic >> 24) & 0xff);   // tx header
+    spiWriteRegister(RFM2X_REG_CHECK_HDR_3 + i,    (magic >> 24) & 0xff);   // rx header
     magic = magic << 8; // advance to next byte
   }
 
-  spiWriteRegister(0x43, 0xff);    // all the bit to be checked
-  spiWriteRegister(0x44, 0xff);    // all the bit to be checked
-  spiWriteRegister(0x45, 0xff);    // all the bit to be checked
-  spiWriteRegister(0x46, 0xff);    // all the bit to be checked
+  spiWriteRegister(RFM2X_REG_HDR_EN_3,       0xff);    // all the bit to be checked
+  spiWriteRegister(RFM2X_REG_HDR_EN_2,       0xff);    // all the bit to be checked
+  spiWriteRegister(RFM2X_REG_HDR_EN_1,       0xff);    // all the bit to be checked
+  spiWriteRegister(RFM2X_REG_HDR_EN_0,       0xff);    // all the bit to be checked
 
   if (isbind) {
-    spiWriteRegister(0x6d, BINDING_POWER);
+    spiWriteRegister(RFM2X_REG_TX_PWR,       BINDING_POWER);
   } else {
-    spiWriteRegister(0x6d, bind_data.rf_power);
+    spiWriteRegister(RFM2X_REG_TX_PWR,       bind_data.rf_power);
   }
 
-  spiWriteRegister(0x79, 0);
+  spiWriteRegister(RFM2X_REG_FREQ_HOP_CH_SEL, 0);
 
-  spiWriteRegister(0x7a, bind_data.rf_channel_spacing);   // channel spacing
+  spiWriteRegister(RFM2X_REG_FREQ_HOP_ST_SZ, bind_data.rf_channel_spacing);   // channel spacing
 
-  spiWriteRegister(0x73, 0x00);
-  spiWriteRegister(0x74, 0x00);    // no offset
+  spiWriteRegister(RFM2X_REG_FREQ_OFF_1,     0x00);
+  spiWriteRegister(RFM2X_REG_FREQ_OFF_2,     0x00);    // no offset
 
   rfmSetCarrierFrequency(isbind ? BINDING_FREQUENCY : bind_data.rf_frequency);
 
@@ -543,9 +543,9 @@ void init_rfm(uint8_t isbind)
 
 void to_rx_mode(void)
 {
-  ItStatus1 = spiReadRegister(0x03);
-  ItStatus2 = spiReadRegister(0x04);
-  spiWriteRegister(0x07, RF22B_PWRSTATE_READY);
+  ItStatus1 = spiReadRegister(RFM2X_REG_INT_STAT_1);
+  ItStatus2 = spiReadRegister(RFM2X_REG_INT_STAT_2);
+  spiWriteRegister(RFM2X_REG_OP_FUNC_CTRL_1, RF22B_PWRSTATE_READY);
   delay(10);
   rx_reset();
   NOP();
@@ -553,31 +553,31 @@ void to_rx_mode(void)
 
 void rx_reset(void)
 {
-  spiWriteRegister(0x07, RF22B_PWRSTATE_READY);
-  spiWriteRegister(0x7e, 36);    // threshold for rx almost full, interrupt when 1 byte received
-  spiWriteRegister(0x08, 0x03);    //clear fifo disable multi packet
-  spiWriteRegister(0x08, 0x00);    // clear fifo, disable multi packet
-  spiWriteRegister(0x07, RF22B_PWRSTATE_RX);   // to rx mode
-  spiWriteRegister(0x05, RF22B_Rx_packet_received_interrupt);
-  ItStatus1 = spiReadRegister(0x03);   //read the Interrupt Status1 register
-  ItStatus2 = spiReadRegister(0x04);
+  spiWriteRegister(RFM2X_REG_OP_FUNC_CTRL_1, RF22B_PWRSTATE_READY);
+  spiWriteRegister(RFM2X_REG_RX_FIFO_CTRL,   36);    // threshold for rx almost full, interrupt when 1 byte received
+  spiWriteRegister(RFM2X_REG_OP_FUNC_CTRL_2, 0x03);    //clear fifo disable multi packet
+  spiWriteRegister(RFM2X_REG_OP_FUNC_CTRL_2, 0x00);    // clear fifo, disable multi packet
+  spiWriteRegister(RFM2X_REG_OP_FUNC_CTRL_1, RF22B_PWRSTATE_RX);   // to rx mode
+  spiWriteRegister(RFM2X_REG_INT_EN_1,       RF22B_Rx_packet_received_interrupt);
+  ItStatus1 = spiReadRegister(RFM2X_REG_INT_STAT_1);   //read the Interrupt Status1 register
+  ItStatus2 = spiReadRegister(RFM2X_REG_INT_STAT_2);
 }
 
 uint32_t tx_start = 0;
 
 void tx_packet_async(uint8_t* pkt, uint8_t size)
 {
-  spiWriteRegister(0x3e, size);   // total tx size
+  spiWriteRegister(RFM2X_REG_TRANSMIT_PKT_LEN, size);   // total tx size
 
   for (uint8_t i = 0; i < size; i++) {
-    spiWriteRegister(0x7f, pkt[i]);
+    spiWriteRegister(RFM2X_REG_FIFO_ACCESS,    pkt[i]);
   }
 
-  spiWriteRegister(0x05, RF22B_PACKET_SENT_INTERRUPT);
-  ItStatus1 = spiReadRegister(0x03);      //read the Interrupt Status1 register
-  ItStatus2 = spiReadRegister(0x04);
+  spiWriteRegister(RFM2X_REG_INT_EN_1,         RF22B_PACKET_SENT_INTERRUPT);
+  ItStatus1 = spiReadRegister(RFM2X_REG_INT_STAT_1);      //read the Interrupt Status1 register
+  ItStatus2 = spiReadRegister(RFM2X_REG_INT_STAT_2);
   tx_start = micros();
-  spiWriteRegister(0x07, RF22B_PWRSTATE_TX);    // to tx mode
+  spiWriteRegister(RFM2X_REG_OP_FUNC_CTRL_1,   RF22B_PWRSTATE_TX);    // to tx mode
 
   RF_Mode = Transmit;
 }
@@ -611,6 +611,47 @@ uint8_t tx_done()
   return 0;
 }
 
+uint8_t rx_length()
+{
+  return spiReadRegister(RFM2X_REG_RCVD_PKT_LEN);
+}
+
+uint8_t rx_packet_simple(uint8_t *pkt, uint8_t size)
+{
+  spiSendAddress(RFM2X_REG_FIFO_ACCESS); // Send the package read command
+  for (int16_t i = 0; i < size; i++) {
+    pkt[i] = spiReadData();
+  }
+
+  return size;
+}
+
+uint8_t rx_packet_more(uint8_t *pkt, uint8_t size)
+{
+  for (int16_t i = 0; i < size; i++) {
+    pkt[i] = spiReadData();
+  }
+
+  return size;
+}
+
+// Returns the number of bytes remaining after the read
+uint8_t rx_packet(uint8_t* pkt, uint8_t size)
+{
+  register uint8_t ready;
+
+  // get packet len
+  ready = rx_length();
+
+  // If we were asked to read more than len, don't do it
+  // however, we MAY have been asked to read fewer bytes.
+  if (size > ready)
+    size = ready;
+
+  // read packet bytes
+  return rx_packet_simple(pkt, size);
+}
+
 void beacon_tone(int16_t hz, int16_t len) //duration is now in half seconds.
 {
   int16_t d = 500000 / hz; // better resolution
@@ -632,37 +673,37 @@ void beacon_tone(int16_t hz, int16_t len) //duration is now in half seconds.
 void beacon_send(void)
 {
   Green_LED_ON
-  ItStatus1 = spiReadRegister(0x03);   // read status, clear interrupt
-  ItStatus2 = spiReadRegister(0x04);
-  spiWriteRegister(0x06, 0x00);    // no wakeup up, lbd,
-  spiWriteRegister(0x07, RF22B_PWRSTATE_READY);      // disable lbd, wakeup timer, use internal 32768,xton = 1; in ready mode
-  spiWriteRegister(0x09, 0x7f);  // (default) c = 12.5p
-  spiWriteRegister(0x0a, 0x05);
-  spiWriteRegister(0x0b, 0x12);    // gpio0 TX State
-  spiWriteRegister(0x0c, 0x15);    // gpio1 RX State
-  spiWriteRegister(0x0d, 0xfd);    // gpio 2 micro-controller clk output
-  spiWriteRegister(0x0e, 0x00);    // gpio    0, 1,2 NO OTHER FUNCTION.
+  ItStatus1 = spiReadRegister(RFM2X_REG_INT_STAT_1);   // read status, clear interrupt
+  ItStatus2 = spiReadRegister(RFM2X_REG_INT_STAT_2);
+  spiWriteRegister(RFM2X_REG_INT_EN_2,        0x00);    // no wakeup up, lbd,
+  spiWriteRegister(RFM2X_REG_OP_FUNC_CTRL_1,  RF22B_PWRSTATE_READY);      // disable lbd, wakeup timer, use internal 32768,xton = 1; in ready mode
+  spiWriteRegister(RFM2X_REG_OSC_LOAD_CAP,    0x7f);  // (default) c = 12.5p
+  spiWriteRegister(RFM2X_REG_MIC_OUTPUT_CLK,  0x05);
+  spiWriteRegister(RFM2X_REG_GPIO0_CFG,       0x12);    // gpio0 TX State
+  spiWriteRegister(RFM2X_REG_GPIO1_CFG,       0x15);    // gpio1 RX State
+  spiWriteRegister(RFM2X_REG_GPIO2_CFG,       0xfd);    // gpio 2 micro-controller clk output
+  spiWriteRegister(RFM2X_REG_IO_PORT_CFG,     0x00);    // gpio    0, 1,2 NO OTHER FUNCTION.
 
-  spiWriteRegister(0x70, 0x2C);    // disable manchest
+  spiWriteRegister(RFM2X_REG_MOD_MODE_CTRL_1, 0x2C);    // disable manchest
 
-  spiWriteRegister(0x30, 0x00);    //disable packet handling
+  spiWriteRegister(RFM2X_REG_DATA_ACC_CTRL,   0x00);    //disable packet handling
 
-  spiWriteRegister(0x79, 0);    // start channel
+  spiWriteRegister(RFM2X_REG_FREQ_HOP_CH_SEL, 0);    // start channel
 
-  spiWriteRegister(0x7a, 0x05);   // 50khz step size (10khz x value) // no hopping
+  spiWriteRegister(RFM2X_REG_FREQ_HOP_ST_SZ,  0x05);   // 50khz step size (10khz x value) // no hopping
 
-  spiWriteRegister(0x71, 0x12);   // trclk=[00] no clock, dtmod=[01] direct using SPI, fd8=0 eninv=0 modtyp=[10] FSK
-  spiWriteRegister(0x72, 0x02);   // fd (frequency deviation) 2*625Hz == 1.25kHz
+  spiWriteRegister(RFM2X_REG_MOD_MODE_CTRL_2, 0x12);   // trclk=[00] no clock, dtmod=[01] direct using SPI, fd8=0 eninv=0 modtyp=[10] FSK
+  spiWriteRegister(RFM2X_REG_FREQ_DEV,        0x02);   // fd (frequency deviation) 2*625Hz == 1.25kHz
 
-  spiWriteRegister(0x73, 0x00);
-  spiWriteRegister(0x74, 0x00);    // no offset
+  spiWriteRegister(RFM2X_REG_FREQ_OFF_1,      0x00);
+  spiWriteRegister(RFM2X_REG_FREQ_OFF_2,      0x00);    // no offset
 
   rfmSetCarrierFrequency(rx_config.beacon_frequency);
 
-  spiWriteRegister(0x6d, 0x07);   // 7 set max power 100mW
+  spiWriteRegister(RFM2X_REG_TX_PWR,          0x07);   // 7 set max power 100mW
 
   delay(10);
-  spiWriteRegister(0x07, RF22B_PWRSTATE_TX);    // to tx mode
+  spiWriteRegister(RFM2X_REG_OP_FUNC_CTRL_1,  RF22B_PWRSTATE_TX);    // to tx mode
   delay(10);
 
   //close encounters tune
@@ -671,24 +712,24 @@ void beacon_send(void)
 
   beacon_tone(392, 1);
 
-  spiWriteRegister(0x6d, 0x05);   // 5 set mid power 25mW
+  spiWriteRegister(RFM2X_REG_TX_PWR,          0x05);   // 5 set mid power 25mW
   delay(10);
   beacon_tone(440,1);
 
-  spiWriteRegister(0x6d, 0x04);   // 4 set mid power 13mW
+  spiWriteRegister(RFM2X_REG_TX_PWR,          0x04);   // 4 set mid power 13mW
   delay(10);
   beacon_tone(349, 1);
 
-  spiWriteRegister(0x6d, 0x02);   // 2 set min power 3mW
+  spiWriteRegister(RFM2X_REG_TX_PWR,          0x02);   // 2 set min power 3mW
   delay(10);
   beacon_tone(175,1);
 
-  spiWriteRegister(0x6d, 0x00);   // 0 set min power 1.3mW
+  spiWriteRegister(RFM2X_REG_TX_PWR,          0x00);   // 0 set min power 1.3mW
   delay(10);
   beacon_tone(261, 2);
 
 
-  spiWriteRegister(0x07, RF22B_PWRSTATE_READY);
+  spiWriteRegister(RFM2X_REG_OP_FUNC_CTRL_1,  RF22B_PWRSTATE_READY);
   Green_LED_OFF
 }
 

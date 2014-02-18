@@ -474,8 +474,7 @@ void handleRXmenu(char c)
       RF_Mode = Receive;
       delay(200);
       if (RF_Mode == Received) {
-        spiSendAddress(0x7f);   // Send the package read command
-        tx_buf[0] = spiReadData();
+        rx_packet(tx_buf, 1);
         if (tx_buf[0] == 'U') {
           Serial.println(F("*****************************"));
           Serial.println(F("RX Acked - update successful!"));
@@ -494,11 +493,7 @@ void handleRXmenu(char c)
       RF_Mode = Receive;
       delay(200);
       if (RF_Mode == Received) {
-        spiSendAddress(0x7f); // Send the package read command
-        tx_buf[0] = spiReadData();
-        for (uint8_t i = 0; i < sizeof(rx_config); i++) {
-          tx_buf[i + 1] = spiReadData();
-        }
+        rx_packet(tx_buf, 1 + sizeof(rx_config));
         memcpy(&rx_config, tx_buf + 1, sizeof(rx_config));
         if (tx_buf[0]=='I') {
           Serial.println(F("*****************************"));
@@ -760,8 +755,9 @@ uint8_t rxcConnect()
     return 2;
   }
 
-  spiSendAddress(0x7f);   // Send the package read command
-  tx_buf[0] = spiReadData();
+  // This sequence takes advantage of the fact that rx_packet_simple starts a FIFO
+  // read transaction.
+  rx_packet_simple(tx_buf, 1);
   if (tx_buf[0] != 'T') {
     return 3;
   }
@@ -775,9 +771,7 @@ uint8_t rxcConnect()
     return 3;
   }
 
-  for (uint8_t i = 0; i < sizeof(struct rxSpecialPinMap) * rxcSpecialPinCount; i++) {
-    *(((uint8_t*)&rxcSpecialPins) + i) = spiReadData();
-  }
+  rx_packet_more((uint8_t *)&rxcSpecialPins, sizeof(struct rxSpecialPinMap) * rxcSpecialPinCount);
 
   tx_buf[0] = 'p'; // ask for config dump
   tx_packet(tx_buf, 1);
@@ -788,15 +782,15 @@ uint8_t rxcConnect()
   if (RF_Mode == Receive) {
     return 2;
   }
-  spiSendAddress(0x7f);   // Send the package read command
-  tx_buf[0] = spiReadData();
+  // This sequence takes advantage of the fact that rx_packet_simple starts a FIFO
+  // read transaction.
+  rx_packet_simple(tx_buf, 1);
   if (tx_buf[0] != 'P') {
     return 3;
   }
 
-  for (uint8_t i = 0; i < sizeof(rx_config); i++) {
-    *(((uint8_t*)&rx_config) + i) = spiReadData();
-  }
+  rx_packet_more((uint8_t *)&rx_config, sizeof(rx_config));
+
   return 1;
 }
 
