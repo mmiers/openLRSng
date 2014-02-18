@@ -1,6 +1,9 @@
 /****************************************************
  * OpenLRSng transmitter code
  ****************************************************/
+
+uint16_t rxerrors = 0;
+
 uint8_t RF_channel = 0;
 
 uint8_t FSstate = 0; // 1 = waiting timer, 2 = send FS, 3 sent waiting btn release
@@ -299,11 +302,11 @@ void checkFS(void)
 }
 
 uint8_t tx_buf[21];
-uint8_t rx_buf[9];
+uint8_t rx_buf[64];
 
 #define SERIAL_BUFSIZE 32
 uint8_t serial_buffer[SERIAL_BUFSIZE];
-uint8_t serial_resend[9];
+uint8_t serial_resend[64];
 uint8_t serial_head;
 uint8_t serial_tail;
 uint8_t serial_okToSend; // 2 if it is ok to send serial instead of servo
@@ -311,6 +314,7 @@ uint8_t serial_okToSend; // 2 if it is ok to send serial instead of servo
 void setup(void)
 {
   uint32_t start;
+
   setupSPI();
 #ifdef SDN_pin
   pinMode(SDN_pin, OUTPUT); //SDN
@@ -579,34 +583,53 @@ void loop(void)
     linkQuality |= 1;
     RF_Mode = Receive;
     spiSendAddress(0x7f); // Send the package read command
-    for (int16_t i = 0; i < 9; i++) {
+    for (int16_t i = 0; i < bind_data.serial_downlink; i++) {
       rx_buf[i] = spiReadData();
     }
 
     if ((tx_buf[0] ^ rx_buf[0]) & 0x40) {
       tx_buf[0] ^= 0x40; // swap sequence to ack
-      if ((rx_buf[0] & 0x38) == 0x38) {
-        uint8_t i;
-        // transparent serial data...
-        for (i = 0; i<= (rx_buf[0] & 7);) {
-          i++;
-          if (bind_data.flags & TELEMETRY_FRSKY) {
-            frskyUserData(rx_buf[i]);
-          } else {
-            TelemetrySerial.write(rx_buf[i]);
+
+      if (!(bind_data.flags & MAVLINK_FRAMING)) {
+        if ((rx_buf[0] & 0x38) == 0x38) {
+          uint8_t i;
+          // transparent serial data...
+          for (i = 0; i<= (rx_buf[0] & 7);) {
+            i++;
+            if (bind_data.flags & TELEMETRY_FRSKY) {
+              frskyUserData(rx_buf[i]);
+            } else {
+              TelemetrySerial.write(rx_buf[i]);
+            }
           }
-        }
-      } else if ((rx_buf[0] & 0x3F) == 0) {
-        RSSI_rx = rx_buf[1];
-        RX_ain0 = rx_buf[2];
-        RX_ain1 = rx_buf[3];
+        } else if ((rx_buf[0] & 0x3F) == 0) {
+          RSSI_rx = rx_buf[1];
+          RX_ain0 = rx_buf[2];
+          RX_ain1 = rx_buf[3];
 #ifdef TEST_DUMP_AFCC
 #define SIGNIT(x) ((int16_t)(((x&0x200)?0xFC00U:0)|(x&0x3FF)))
-        Serial.print(SIGNIT(rfmGetAFCC()));
-        Serial.print(':');
-        Serial.println(SIGNIT((rx_buf[4] << 8) + rx_buf[5]));
+          Serial.print(SIGNIT(rfmGetAFCC()));
+          Serial.print(':');
+          Serial.println(SIGNIT((rx_buf[4] << 8) + rx_buf[5]));
 #endif
-        linkQualityRX = rx_buf[6];
+          linkQualityRX = rx_buf[6];
+        }
+      } else {
+        // transparent serial data...
+        const uint8_t serialByteCount = rx_buf[0] & 0x3F;
+        if (serialByteCount > 0) {
+          for (uint8_t i = 1; i <= serialByteCount; i++) {
+            // Check mavlink frames of incoming serial stream before injection of mavlink radio status packet.
+            // Inject packet right after a completed packet
+            const uint8_t ch = rx_buf[i];
+            TelemetrySerial.write(ch);
+            if (MAVLink_detectFrame(ch) && lastTelemetry - last_mavlinkInject_time > MAVLINK_INJECT_INTERVAL) {
+              // Inject Mavlink radio modem status package.
+              MAVLink_report(0, RSSI_tx, rxerrors); // uint8_t RSSI_remote, uint16_t RSSI_local, uint16_t rxerrors)
+              last_mavlinkInject_time = lastTelemetry;
+            }
+          }
+        }
       }
     }
     if (serial_okToSend == 1) {
@@ -627,7 +650,7 @@ void loop(void)
   if ((time - lastSent) >= getInterval(&bind_data)) {
     lastSent = time;
 
-    if (ppmAge < 8) {
+    if (1/*ppmAge < 8*/) {
       ppmAge++;
 
       if (lastTelemetry) {
@@ -636,6 +659,7 @@ void loop(void)
           if (!(bind_data.flags & MUTE_TX)) {
             buzzerOn(BZ_FREQ);
           }
+          rxerrors++;
           lastTelemetry = 0;
         } else {
           // telemetry link re-established

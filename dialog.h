@@ -202,6 +202,15 @@ void bindPrint(void)
   Serial.print(F("B) Micro (half) PPM    :"));
   printYesNo(bind_data.flags & MICROPPM);
 
+  Serial.print(F("C) MAVlink framing     :"));
+  Serial.println((bind_data.flags & MAVLINK_FRAMING) ? "Yes" : "No");
+
+  Serial.print(F("D) Reverse PPM RSSI    :"));
+  Serial.println((bind_data.flags & REVERSE_PPM_RSSI) ? "Yes" : "No");
+
+  Serial.print(F("E) Telemetry packet size:"));
+  Serial.println(bind_data.serial_downlink);
+
   Serial.print(F("Calculated packet interval: "));
   Serial.print(getInterval(&bind_data));
   Serial.print(F(" == "));
@@ -325,6 +334,9 @@ void CLI_menu_headers(void)
     break;
   case 9:
     Serial.println(F("Set serial baudrate: "));
+    break;
+  case 11:
+    Serial.println(F("Set telemetry packet size: "));
     break;
   }
 
@@ -907,6 +919,25 @@ void handleCLImenu(char c)
       bind_data.flags ^= MICROPPM;
       CLI_menu = -1;
       break;
+    case 'c':
+    case 'C':
+      Serial.println(F("Toggled MAVlink framing"));
+      bind_data.flags ^= MAVLINK_FRAMING;
+      CLI_menu = -1;
+      CLI_menu_headers();
+      break;
+    case 'd':
+    case 'D':
+      Serial.println(F("Toggled Reverse PPM RSSI"));
+      bind_data.flags ^= REVERSE_PPM_RSSI;
+      CLI_menu = -1;
+      CLI_menu_headers();
+      break;
+    case 'e':
+    case 'E':
+      CLI_menu = 11;
+      CLI_menu_headers();
+      break;
     case 'z':
     case 'Z':
       CLI_RX_config();
@@ -979,6 +1010,12 @@ void handleCLImenu(char c)
         case 9:
           if ((value >0) && (value <= 115200)) {
             bind_data.serial_baudrate = value;
+            valid_input = 1;
+          }
+          break;
+        case 11:
+          if ((value >= 1) && (value <= 63)) {
+            bind_data.serial_downlink = value;
             valid_input = 1;
           }
           break;
