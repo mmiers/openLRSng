@@ -250,7 +250,7 @@ void PSP_process_data(BinaryPSP *psp)
       delay(200);
 
       if (RF_Mode == Received) {
-        rx_packet(tx_buf, 1);
+        rx_packet_simple(tx_buf, 1);
 
         if (tx_buf[0]=='U') {
           PSP_serialize_uint8(psp, 0x01); // success
