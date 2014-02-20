@@ -124,6 +124,10 @@
 #define RFM2X_REG_RX_FIFO_CTRL            0x7EU
 #define RFM2X_REG_FIFO_ACCESS             0x7FU
 
+// Special values
+#define RFM2X_REGV_NONE                       0x00U
+#define RFM2X_REGV_ALL                        0xFFU
+
 // Register 00 - Device type
 #define RFM2X_DEV_TYPE_7                      0x07U
 // Register 01 - Device version
@@ -154,6 +158,8 @@
 #define RFM2X_INT_CHIPRDY                     0x02U
 #define RFM2X_INT_POR                         0x01U
 // Register 05 - Interrupt enable register 1
+#define RFM2X_INT_NONE                        RFM2X_REGV_NONE
+#define RFM2X_INT_ALL                         RFM2X_REGV_ALL
 // Register 06 - Interrupt enable register 2
 // Register 07 - Operating and function control 1
 #define RFM2X_OFC_1_SWRES                     0x80U
@@ -197,6 +203,7 @@
 #define RFM2X_IOPC_DIO2                       0x04U
 #define RFM2X_IOPC_DIO1                       0x02U
 #define RFM2X_IOPC_DIO0                       0x01U
+#define RFM2X_IOPC_NONE                       0x00U
 // Register 0F ADC configuration
 #define RFM2X_AC_START                        0x80U
 #define RFM2X_AC_ADCSEL_MASK                  0x70U
