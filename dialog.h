@@ -474,7 +474,7 @@ void handleRXmenu(char c)
       RF_Mode = Receive;
       delay(200);
       if (RF_Mode == Received) {
-        rx_packet(tx_buf, 1);
+        rx_packet_simple(tx_buf, 1);
         if (tx_buf[0] == 'U') {
           Serial.println(F("*****************************"));
           Serial.println(F("RX Acked - update successful!"));
@@ -493,7 +493,7 @@ void handleRXmenu(char c)
       RF_Mode = Receive;
       delay(200);
       if (RF_Mode == Received) {
-        rx_packet(tx_buf, 1 + sizeof(rx_config));
+        rx_packet_simple(tx_buf, 1 + sizeof(rx_config));
         memcpy(&rx_config, tx_buf + 1, sizeof(rx_config));
         if (tx_buf[0]=='I') {
           Serial.println(F("*****************************"));
