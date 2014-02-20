@@ -239,7 +239,7 @@ public:
         delay(200);
 
         if (RF_Mode == Received) {
-          rx_packet(tx_buf, 1);
+          rx_packet_simple(tx_buf, 1);
           if (tx_buf[0]=='U') {
             serialize_uint8(0x01); // success
           } else {
@@ -269,7 +269,7 @@ public:
       delay(200);
 
       if (RF_Mode == Received) {
-        rx_packet(tx_buf, 1 + sizeof(rx_config));
+        rx_packet_simple(tx_buf, 1 + sizeof(rx_config));
         memcpy(&rx_config, tx_buf + 1, sizeof(rx_config));
 
         if (tx_buf[0] == 'I') {
