@@ -269,7 +269,7 @@ void PSP_process_data(uint8_t code, uint16_t payload_length_received, uint8_t da
       spiSendAddress(RFM2X_REG_FIFO_ACCESS);   // Send the package read command
       tx_buf[0] = spiReadData();
 
-      rx_packet_simple(tx_buf, 1);
+      rx_packet_simple(tx_buf, sizeof(rx_config));
       memcpy(&rx_config, tx_buf + 1, sizeof(rx_config));
 
       if (tx_buf[0] == 'I') {
