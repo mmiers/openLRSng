@@ -1062,7 +1062,7 @@ void binaryMode()
 
   while (binary_mode_active == true) { // LOCK user here until exit command is received
     if (Serial.available()) {
-      binary_com.read_packet();
+      PSP_read();
     }
   }
 }
