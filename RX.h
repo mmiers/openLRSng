@@ -136,6 +136,12 @@ void set_RSSI_output()
   }
 }
 
+void failsafeInvalidate(void)
+{
+  failsafeIsValid = 0;
+  myEEPROMwrite(EEPROM_FAILSAFE_OFFSET, 0);
+}
+
 void failsafeSave(void)
 {
   uint32_t start = millis();
@@ -292,7 +298,7 @@ void setupOutputs()
 void updateLBeep(bool packetLost)
 {
   if (rx_config.pinMapping[LLIND_OUTPUT] == PINMAP_LLIND) {
-    digitalWrite(LLIND_OUTPUT,packetLost);
+    digitalWrite(OUTPUT_PIN[LLIND_OUTPUT],packetLost);
   }
   if (rx_config.pinMapping[RSSI_OUTPUT] == PINMAP_LBEEP) {
     if (packetLost) {
@@ -308,8 +314,8 @@ void updateSwitches()
   uint8_t i;
   for (i = 0; i < OUTPUTS; i++) {
     uint8_t map = rx_config.pinMapping[i];
-    if ((map & 0x10) == 0x10) { // 16-31
-      digitalWrite(i, (PPM[map & 0x0f] > 255) ? HIGH : LOW);
+    if ((map & 0xf0) == 0x10) { // 16-31
+      digitalWrite(OUTPUT_PIN[i], (PPM[map & 0x0f] > 255) ? HIGH : LOW);
     }
   }
 }
@@ -369,10 +375,35 @@ uint8_t bindReceive(uint32_t timeout)
         rxWriteEeprom();
         rxb = 'U';
         tx_packet(&rxb, 1); // ACK that we updated settings
+      } else if (rxb == 'f') {
+        uint8_t rxc_buf[33];
+        if (failsafeIsValid) {
+          rxc_buf[0]='F';
+          for (uint8_t i = 0; i < 16; i++) {
+            rxc_buf[i * 2 + 1] = (failsafePPM[i] >> 8);
+            rxc_buf[i * 2 + 2] = (failsafePPM[i] & 0xff);
+          }
+        } else {
+          rxc_buf[0]='f';
+        }
+        tx_packet(rxc_buf, 33);
+      } else if (rxb == 'g') {
+        for (uint8_t i = 0; i < 16 ; i++) {
+          uint16_t val;
+          val = (uint16_t)spiReadData() << 8;
+          val += spiReadData();
+          PPM[i] = val;
+        }
+        rxb = 'G';
+        tx_packet(&rxb, 1);
+        failsafeSave();
+      } else if (rxb == 'G') {
+        failsafeInvalidate();
+        rxb = 'G';
+        tx_packet(&rxb, 1);
       }
       RF_Mode = Receive;
       rx_reset();
-
     }
   }
   return 0;
@@ -760,6 +791,13 @@ retry:
     if ((rx_buf[0] & 0x3e) == 0x00) {
       cli();
       unpackChannels(bind_data.flags & 7, PPM, rx_buf + 1);
+#if DEBUG_DUMP_PPM
+      for (uint8_t i=0; i<8; i++) {
+        Serial.print(PPM[i]);
+        Serial.print(',');
+      }
+      Serial.println();
+#endif
       if (rx_config.RSSIpwm < 16) {
         PPM[rx_config.RSSIpwm] = RSSI2Bits(compositeRSSI);
       }
