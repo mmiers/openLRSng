@@ -685,22 +685,27 @@ void beacon_send(void)
   //octave 3:  392  440  349  175   261
 
   beacon_tone(392, 1);
+  watchdogReset();
 
   spiWriteRegister(RFM2X_REG_TX_PWR,          RFM2X_MAKE_BITS(TP_TXPOW, 5));   // 5 set mid power 25mW
   delay(10);
   beacon_tone(440,1);
+  watchdogReset();
 
   spiWriteRegister(RFM2X_REG_TX_PWR,          RFM2X_MAKE_BITS(TP_TXPOW, 4));   // 4 set mid power 13mW
   delay(10);
   beacon_tone(349, 1);
+  watchdogReset();
 
   spiWriteRegister(RFM2X_REG_TX_PWR,          RFM2X_MAKE_BITS(TP_TXPOW, 2));   // 2 set min power 3mW
   delay(10);
   beacon_tone(175,1);
+  watchdogReset();
 
   spiWriteRegister(RFM2X_REG_TX_PWR,          RFM2X_MAKE_BITS(TP_TXPOW, 0));   // 0 set min power 1.3mW
   delay(10);
   beacon_tone(261, 2);
+  watchdogReset();
 
 
   spiWriteRegister(RFM2X_REG_OP_FUNC_CTRL_1,  RF22B_PWRSTATE_READY);
