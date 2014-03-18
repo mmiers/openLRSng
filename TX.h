@@ -134,7 +134,7 @@ void bindMode(void)
 {
   uint32_t prevsend = millis();
   uint8_t  tx_buf[sizeof(bind_data) + 1];
-  boolean  sendBinds = 1;
+  bool  sendBinds = 1;
 
   init_rfm(1);
 
@@ -315,6 +315,8 @@ void setup(void)
 {
   uint32_t start;
 
+  watchdogConfig(WATCHDOG_OFF);
+
   setupSPI();
 #ifdef SDN_pin
   pinMode(SDN_pin, OUTPUT); //SDN
@@ -410,6 +412,7 @@ void setup(void)
   } else if (bind_data.flags & TELEMETRY_MASK) {
     // ?
   }
+  watchdogConfig(WATCHDOG_2S);
 }
 
 uint8_t compositeRSSI(uint8_t rssi, uint8_t linkq)
@@ -659,6 +662,12 @@ void loop(void)
 
   if ((time - lastSent) >= getInterval(&bind_data)) {
     lastSent = time;
+
+    watchdogReset();
+
+#ifdef TEST_HALT_TX_BY_CH3
+    while (PPM[2] > 1013);
+#endif
 
     if (1/*ppmAge < 8*/) {
       ppmAge++;
