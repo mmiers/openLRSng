@@ -144,7 +144,6 @@ void failsafeInvalidate(void)
 
 void failsafeSave(void)
 {
-  uint32_t start = millis();
   uint8_t ee_buf[20];
 
   for (int16_t i = 0; i < PPM_CHANNELS; i++) {
@@ -164,13 +163,6 @@ void failsafeSave(void)
   ee_buf[3] = 0xFE;
   for (int16_t i = 0; i < 4; i++) {
     myEEPROMwrite(EEPROM_FAILSAFE_OFFSET + i, ee_buf[i]);
-  }
-
-  // make this last at least 200ms for user to see it
-  // needed as optimized eeprom code can be real fast if no changes are done
-  start = millis() - start;
-  if (start < 200) {
-    delay(200 - start);
   }
 }
 
@@ -356,6 +348,11 @@ uint8_t bindReceive(uint32_t timeout)
           rxInitDefaults(1);
           rxc_buf[0] = 'I';
         }
+        if (watchdogUsed) {
+          rx_config.flags|=WATCHDOG_USED;
+        } else {
+          rx_config.flags&=~WATCHDOG_USED;
+        }
         memcpy(rxc_buf + 1, &rx_config, sizeof(rx_config));
         tx_packet(rxc_buf, sizeof(rx_config) + 1);
       } else if (rxb == 't') {
@@ -380,8 +377,9 @@ uint8_t bindReceive(uint32_t timeout)
         if (failsafeIsValid) {
           rxc_buf[0]='F';
           for (uint8_t i = 0; i < 16; i++) {
-            rxc_buf[i * 2 + 1] = (failsafePPM[i] >> 8);
-            rxc_buf[i * 2 + 2] = (failsafePPM[i] & 0xff);
+            uint16_t us = servoBits2Us(failsafePPM[i]);
+            rxc_buf[i * 2 + 1] = (us >> 8);
+            rxc_buf[i * 2 + 2] = (us & 0xff);
           }
         } else {
           rxc_buf[0]='f';
@@ -392,11 +390,11 @@ uint8_t bindReceive(uint32_t timeout)
           uint16_t val;
           val = (uint16_t)spiReadData() << 8;
           val += spiReadData();
-          PPM[i] = val;
+          PPM[i] = servoUs2Bits(val);
         }
         rxb = 'G';
-        tx_packet(&rxb, 1);
         failsafeSave();
+        tx_packet(&rxb, 1);
       } else if (rxb == 'G') {
         failsafeInvalidate();
         rxb = 'G';
@@ -553,6 +551,8 @@ void reinitSlave()
 
 void setup()
 {
+  watchdogConfig(WATCHDOG_OFF);
+
   //LEDs
   pinMode(Green_LED, OUTPUT);
   pinMode(Red_LED, OUTPUT);
@@ -632,6 +632,8 @@ void setup()
   }
 
   Serial.print("Entering normal mode");
+
+  watchdogConfig(WATCHDOG_2S);
 
   init_rfm(0);   // Configure the RFM22B's registers for normal operation
   RF_channel = 0;
@@ -727,6 +729,8 @@ uint32_t rxStatsMs = 0;
 void loop()
 {
   uint32_t timeUs, timeMs;
+
+  watchdogReset();
 
   if (spiReadRegister(0x0C) == 0) {     // detect the locked module and reboot
     Serial.println("RX hang");
@@ -876,7 +880,7 @@ retry:
           tx_buf[6] = countSetBits(linkQuality & 0x7fff);
         }
       }
-#ifdef TEST_NO_ACK_BY_CH0
+#ifdef TEST_NO_ACK_BY_CH1
       if (PPM[0]<900) {
         tx_packet_async(tx_buf, 9);
         while(!tx_done()) {
@@ -889,6 +893,13 @@ retry:
         checkSerial();
       }
 #endif
+
+#ifdef TEST_HALT_RX_BY_CH2
+      if (PPM[1]>1013) {
+        fatalBlink(3);
+      }
+#endif
+
       updateSwitches();
     }
 
