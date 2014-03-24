@@ -172,17 +172,21 @@ void bindMode(void)
       Red_LED_ON;
       Green_LED_ON;
       switch (SerialRead(Serial)) {
+#ifdef CLI
       case '\n':
       case '\r':
         lrs_puts("Enter menu...");
         handleCLI();
         break;
+#endif
       case '#':
         scannerMode();
         break;
+#ifdef CONFIGURATOR
       case 'B':
         binaryMode();
         break;
+#endif
       default:
         break;
       }
