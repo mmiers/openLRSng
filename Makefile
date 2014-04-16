@@ -79,6 +79,8 @@ AR=$(EXEPATH)/$(EXEPREFIX)ar
 SIZE=$(EXEPATH)/$(EXEPREFIX)size
 OBJCOPY=$(EXEPATH)/$(EXEPREFIX)objcopy
 
+RM=rm
+
 #
 # Styling
 #
@@ -88,7 +90,9 @@ ASTYLEOPTIONS=--style=1tbs --indent=spaces=2 --suffix=none
 #
 # Compile flags
 #
-COPTFLAGS= -g -Os -fno-inline-small-functions
+COPTFLAGS= -g -Os -funsigned-char -funsigned-bitfields -fpack-struct -fshort-enums \
+	   -fno-inline-small-functions -Wl,--relax -mcall-prologues
+
 CFLAGS=-Wall -ffunction-sections -fdata-sections -mmcu=$(CPU) -DF_CPU=$(CLOCK) -MMD \
 	-DUSB_VID=$(USB_VID) -DUSB_PID=$(USB_PID) -DARDUINO=105 -D__PROG_TYPES_COMPAT__ $(DEFINES)
 CXXFLAGS=-fno-exceptions
@@ -112,13 +116,13 @@ all: openLRSng.hex
 # From here down are build rules
 #
 define ino-command
-	$(CXX) -c $(COPTFLAGS) $(CXXFLAGS) $(CFLAGS) $(INCLUDE) -o $@ -x c++ $<
+	@$(CXX) -c $(COPTFLAGS) $(CXXFLAGS) $(CFLAGS) $(INCLUDE) -o $@ -x c++ $<
 endef
 define cc-command
-	$(CC) --std=c99 -c $(COPTFLAGS) $(CFLAGS) $(INCLUDE) -o $@ $<
+	@$(CC) --std=c99 -c $(COPTFLAGS) $(CFLAGS) $(INCLUDE) -o $@ $<
 endef
 define cxx-command
-	$(CXX) -c $(COPTFLAGS) $(CXXFLAGS) $(CFLAGS) $(INCLUDE) -o $@ $<
+	@$(CXX) -c $(COPTFLAGS) $(CXXFLAGS) $(CFLAGS) $(INCLUDE) -o $@ $<
 endef
 
 .PHONY: all clean upload astyle 433 868 915 allfw
@@ -139,11 +143,11 @@ clean:
 	rm -f *.[aod] *.elf *.eep *.d *.hex
 
 openLRSng.hex: $(OBJS)
-	$(CC) -Os -Wl,--gc-sections -mmcu=$(CPU) -o openLRSng.elf $(OBJS) -lm 
+	@$(CC) -Os -Wl,--gc-sections -mmcu=$(CPU) -o openLRSng.elf $(OBJS) -Llibraries -lm
 	@$(OBJCOPY) -O ihex -j .eeprom --set-section-flags=.eeprom=alloc,load \
 		--no-change-warnings --change-section-lma .eeprom=0 \
-		openLRSng.elf openLRSng.eep 
-	@$(OBJCOPY) -O ihex -R .eeprom openLRSng.elf openLRSng.hex 
+		openLRSng.elf openLRSng.eep
+	@$(OBJCOPY) -O ihex -R .eeprom openLRSng.elf openLRSng.hex
 	@echo "NOTE: Deployment size is text + data."
 	@$(SIZE) openLRSng.elf
 
@@ -153,37 +157,37 @@ astyle:
 433:
 	mkdir -p out
 	rm -f out/*.hex
-	make COMPILE_TX= BOARD_TYPE=3 clean all && cp openLRSng.hex out/RX-3.hex
-	make COMPILE_TX= BOARD_TYPE=5 clean all && cp openLRSng.hex out/RX-5.hex
-	make COMPILE_TX=1 BOARD_TYPE=2 clean all && cp openLRSng.hex out/TX-2.hex
-	make COMPILE_TX=1 BOARD_TYPE=3 clean all && cp openLRSng.hex out/TX-3.hex
-	make COMPILE_TX=1 BOARD_TYPE=4 clean all && cp openLRSng.hex out/TX-4.hex
-	make COMPILE_TX=1 BOARD_TYPE=5 clean all && cp openLRSng.hex out/TX-5.hex
-	make COMPILE_TX=1 BOARD_TYPE=6 clean all && cp openLRSng.hex out/TX-6.hex
+	make -s COMPILE_TX= BOARD_TYPE=3 clean all && cp openLRSng.hex out/RX-3.hex
+	make -s COMPILE_TX= BOARD_TYPE=5 clean all && cp openLRSng.hex out/RX-5.hex
+	make -s COMPILE_TX=1 BOARD_TYPE=2 clean all && cp openLRSng.hex out/TX-2.hex
+	make -s COMPILE_TX=1 BOARD_TYPE=3 clean all && cp openLRSng.hex out/TX-3.hex
+	make -s COMPILE_TX=1 BOARD_TYPE=4 clean all && cp openLRSng.hex out/TX-4.hex
+	make -s COMPILE_TX=1 BOARD_TYPE=5 clean all && cp openLRSng.hex out/TX-5.hex
+	make -s COMPILE_TX=1 BOARD_TYPE=6 clean all && cp openLRSng.hex out/TX-6.hex
 	ls -l out
 
 868:
 	mkdir -p out/868
 	rm -f out/868/*.hex
-	make RFMXX_868=1 COMPILE_TX= BOARD_TYPE=3 clean all && cp openLRSng.hex out/868/RX-3.hex
-	make RFMXX_868=1 COMPILE_TX= BOARD_TYPE=5 clean all && cp openLRSng.hex out/868/RX-5.hex
-	make RFMXX_868=1 COMPILE_TX=1 BOARD_TYPE=2 clean all && cp openLRSng.hex out/868/TX-2.hex
-	make RFMXX_868=1 COMPILE_TX=1 BOARD_TYPE=3 clean all && cp openLRSng.hex out/868/TX-3.hex
-	make RFMXX_868=1 COMPILE_TX=1 BOARD_TYPE=4 clean all && cp openLRSng.hex out/868/TX-4.hex
-	make RFMXX_868=1 COMPILE_TX=1 BOARD_TYPE=5 clean all && cp openLRSng.hex out/868/TX-5.hex
-	make RFMXX_868=1 COMPILE_TX=1 BOARD_TYPE=6 clean all && cp openLRSng.hex out/868/TX-6.hex
+	make -s RFMXX_868=1 COMPILE_TX= BOARD_TYPE=3 clean all && cp openLRSng.hex out/868/RX-3.hex
+	make -s RFMXX_868=1 COMPILE_TX= BOARD_TYPE=5 clean all && cp openLRSng.hex out/868/RX-5.hex
+	make -s RFMXX_868=1 COMPILE_TX=1 BOARD_TYPE=2 clean all && cp openLRSng.hex out/868/TX-2.hex
+	make -s RFMXX_868=1 COMPILE_TX=1 BOARD_TYPE=3 clean all && cp openLRSng.hex out/868/TX-3.hex
+	make -s RFMXX_868=1 COMPILE_TX=1 BOARD_TYPE=4 clean all && cp openLRSng.hex out/868/TX-4.hex
+	make -s RFMXX_868=1 COMPILE_TX=1 BOARD_TYPE=5 clean all && cp openLRSng.hex out/868/TX-5.hex
+	make -s RFMXX_868=1 COMPILE_TX=1 BOARD_TYPE=6 clean all && cp openLRSng.hex out/868/TX-6.hex
 	ls -l out/868
 
 915:
 	mkdir -p out/915
 	rm -f out/915/*.hex
-	make RFMXX_915=1 COMPILE_TX= BOARD_TYPE=3 clean all && cp openLRSng.hex out/915/RX-3.hex
-	make RFMXX_915=1 COMPILE_TX= BOARD_TYPE=5 clean all && cp openLRSng.hex out/915/RX-5.hex
-	make RFMXX_915=1 COMPILE_TX=1 BOARD_TYPE=2 clean all && cp openLRSng.hex out/915/TX-2.hex
-	make RFMXX_915=1 COMPILE_TX=1 BOARD_TYPE=3 clean all && cp openLRSng.hex out/915/TX-3.hex
-	make RFMXX_915=1 COMPILE_TX=1 BOARD_TYPE=4 clean all && cp openLRSng.hex out/915/TX-4.hex
-	make RFMXX_915=1 COMPILE_TX=1 BOARD_TYPE=5 clean all && cp openLRSng.hex out/915/TX-5.hex
-	make RFMXX_915=1 COMPILE_TX=1 BOARD_TYPE=6 clean all && cp openLRSng.hex out/915/TX-6.hex
+	make -s RFMXX_915=1 COMPILE_TX= BOARD_TYPE=3 clean all && cp openLRSng.hex out/915/RX-3.hex
+	make -s RFMXX_915=1 COMPILE_TX= BOARD_TYPE=5 clean all && cp openLRSng.hex out/915/RX-5.hex
+	make -s RFMXX_915=1 COMPILE_TX=1 BOARD_TYPE=2 clean all && cp openLRSng.hex out/915/TX-2.hex
+	make -s RFMXX_915=1 COMPILE_TX=1 BOARD_TYPE=3 clean all && cp openLRSng.hex out/915/TX-3.hex
+	make -s RFMXX_915=1 COMPILE_TX=1 BOARD_TYPE=4 clean all && cp openLRSng.hex out/915/TX-4.hex
+	make -s RFMXX_915=1 COMPILE_TX=1 BOARD_TYPE=5 clean all && cp openLRSng.hex out/915/TX-5.hex
+	make -s RFMXX_915=1 COMPILE_TX=1 BOARD_TYPE=6 clean all && cp openLRSng.hex out/915/TX-6.hex
 	ls -l out/868
 
 allfw:  433 868 915
