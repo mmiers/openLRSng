@@ -54,6 +54,11 @@ union ppm_msg {
 #define BZ_FREQ 2000
 #endif
 
+#ifdef DEBUG_DUMP_PPM
+uint8_t ppmDump   = 0;
+uint32_t lastDump = 0;
+#endif
+
 /****************************************************
  * Interrupt Vector
  ****************************************************/
@@ -64,7 +69,7 @@ static inline void processPulse(uint16_t pulse)
     return;
   }
 
-  if (!(bind_data.flags & MICROPPM)) {
+  if (!(tx_config.flags & MICROPPM)) {
     pulse >>= 1; // divide by 2 to get servo value on normal PPM
   }
 
@@ -75,6 +80,9 @@ static inline void processPulse(uint16_t pulse)
         PPM[i] = ppmWork.words[i];
       }
       ppmAge = 0;                 // brand new PPM data received
+#ifdef DEBUG_DUMP_PPM
+      ppmDump = 1;
+#endif
     }
     ppmCounter = 0;             // -> restart the channel counter
   } else if ((pulse > 700) && (ppmCounter < PPM_CHANNELS)) { // extra channels will get ignored here
@@ -99,7 +107,7 @@ void setupPPMinput()
   TCCR1A = ((1 << WGM10) | (1 << WGM11));
   TCCR1B = ((1 << WGM12) | (1 << WGM13) | (1 << CS11) | (1 <<ICNC1));
   // normally capture on rising edge, allow invertting via SW flag
-  if (!(bind_data.flags & INVERTED_PPMIN)) {
+  if (!(tx_config.flags & INVERTED_PPMIN)) {
     TCCR1B |= (1 << ICES1);
   }
   OCR1A = 65535;
@@ -110,7 +118,7 @@ void setupPPMinput()
 ISR(PPM_Signal_Interrupt)
 {
   uint16_t pulseWidth;
-  if ( (bind_data.flags & INVERTED_PPMIN) ^ PPM_Signal_Edge_Check) {
+  if ( (tx_config.flags & INVERTED_PPMIN) ^ PPM_Signal_Edge_Check) {
     pulseWidth = TCNT1; // read the timer1 value
     TCNT1 = 0; // reset the timer1 value for next
     processPulse(pulseWidth);
@@ -237,28 +245,19 @@ void checkButton(void)
       buzzerOff();
       if (swapProfile) {
         profileSwap((activeProfile + 1) % TX_PROFILE_COUNT);
-        lrs_printf("New profile: %d\r\n", activeProfile);
-        if (bindReadEeprom()) {
-          lrs_puts("Loaded settings from EEPROM\n");
-        } else {
-          lrs_puts("EEPROM data not valid, reiniting");
-          bindInitDefaults();
-          bindWriteEeprom();
-        }
+        txReadEeprom();
         return;
       }
       bindRandomize();
-      bindWriteEeprom();
-      bindPrint();
+      txWriteEeprom();
     }
 just_bind:
     // Enter binding mode, automatically after recoding or when pressed for shorter time.
-    lrs_puts("Entering binding mode\n");
     bindMode();
   }
 }
 
-void checkBND(void)
+static inline void checkBND(void)
 {
   if ((SerialAvailable(Serial) > 3) &&
       (SerialRead(Serial) == 'B') && (SerialRead(Serial) == 'N') &&
@@ -268,7 +267,7 @@ void checkBND(void)
   }
 }
 
-void checkFS(void)
+static inline void checkFS(void)
 {
 
   switch (FSstate) {
@@ -341,15 +340,13 @@ void setup(void)
 #endif
   buzzerInit();
 
+#ifdef __AVR_ATmega32U4__
+  SerialBegin(Serial, 0); // Suppress warning on overflow on Leonardo
+#else
   SerialBegin(Serial, 115200);
+#endif
   profileInit();
-  if (bindReadEeprom()) {
-    lrs_puts("Loaded settings from EEPROM\n");
-  } else {
-    lrs_puts("EEPROM data not valid, reiniting");
-    bindInitDefaults();
-    bindWriteEeprom();
-  }
+  txReadEeprom();
 
   setupPPMinput();
   ppmAge = 255;
@@ -439,7 +436,7 @@ uint32_t srxLast=0;
 uint8_t srxFlags=0;
 uint8_t srxChannels=0;
 
-void processSpektrum(uint8_t c)
+static inline void processSpektrum(uint8_t c)
 {
   if (frameIndex == 0) {
     frameIndex++;
@@ -460,15 +457,18 @@ void processSpektrum(uint8_t c)
         if (ch<16) {
           PPM[ch] = v;
         }
-        ppmAge=0;
+#ifdef DEBUG_DUMP_PPM
+        ppmDump = 1;
+#endif
+        ppmAge = 0;
       }
     }
   } else {
-    frameIndex=0;
+    frameIndex = 0;
   }
 }
 
-void processSBUS(uint8_t c)
+static inline void processSBUS(uint8_t c)
 {
   if (frameIndex == 0) {
     if (c == SBUS_SYNC) {
@@ -490,14 +490,17 @@ void processSBUS(uint8_t c)
         PPM[(set<<3)+7] = ppmWork.sbus.ch[set].ch7 >> 1;
       }
       if ((ppmWork.sbus.status & 0x08)==0) {
-        ppmAge=0;
+#ifdef DEBUG_DUMP_PPM
+        ppmDump = 1;
+#endif
+        ppmAge = 0;
       }
     }
     frameIndex = 0;
   }
 }
 
-void processSUMD(uint8_t c)
+static inline void processSUMD(uint8_t c)
 {
   if ((frameIndex == 0) && (c == SUMD_HEAD)) {
     CRC16_reset();
@@ -527,6 +530,9 @@ void processSUMD(uint8_t c)
           uint16_t val = (uint16_t)ppmWork.bytes[ch*2]<<8 | (uint16_t)ppmWork.bytes[ch*2+1];
           PPM[ch] = servoUs2Bits(val >> 3);
         }
+#ifdef DEBUG_DUMP_PPM
+        ppmDump = 1;
+#endif
         ppmAge = 0;
       }
       frameIndex = 0;
@@ -554,25 +560,20 @@ void processChannelsFromSerial(uint8_t c)
   }
 }
 
-#ifdef DEBUG_DUMP_PPM
-uint32_t lastTMP;
-#endif
-
 void loop(void)
 {
 #ifdef DEBUG_DUMP_PPM
-  {
-    uint32_t timeTMP=micros();
-    if ((timeTMP-lastTMP)>1000000) {
-      lastTMP=timeTMP;
-      TelemetrySerial.print(ppmAge);
+  if (ppmDump) {
+    uint32_t timeTMP = millis();
+    Serial.print(timeTMP - lastDump);
+    lastDump = timeTMP;
+    TelemetrySerial.print(':');
+    for (uint8_t i = 0; i < 16; i++) {
+      TelemetrySerial.print(PPM[i]);
       TelemetrySerial.print(',');
-      for (uint8_t i=0; i<8; i++) {
-        TelemetrySerial.print(PPM[i]);
-        TelemetrySerial.print(',');
-      }
-      TelemetrySerial.println();
     }
+    TelemetrySerial.println();
+    ppmDump = 0;
   }
 #endif
 
@@ -585,10 +586,11 @@ void loop(void)
   }
 
   while (SerialAvailable(TelemetrySerial)) {
+    uint8_t ch = SerialRead(TelemetrySerial);
     if (serialMode) {
-      processChannelsFromSerial(SerialRead(TelemetrySerial));
+      processChannelsFromSerial(ch);
     } else if (((serial_tail + 1) % SERIAL_BUFSIZE) != serial_head) {
-      serial_buffer[serial_tail] = SerialRead(TelemetrySerial);
+      serial_buffer[serial_tail] = ch;
       serial_tail = (serial_tail + 1) % SERIAL_BUFSIZE;
     }
   }
@@ -662,7 +664,7 @@ void loop(void)
       if (lastTelemetry) {
         if ((time - lastTelemetry) > getInterval(&bind_data)) {
           // telemetry lost
-          if (!(bind_data.flags & MUTE_TX)) {
+          if (!(tx_config.flags & MUTE_TX)) {
             buzzerOn(BZ_FREQ);
           }
           lastTelemetry = 0;
