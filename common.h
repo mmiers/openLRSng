@@ -8,7 +8,6 @@ void spiWriteRegister(uint8_t address, uint8_t data);
 void tx_packet(uint8_t* pkt, uint8_t size);
 void to_rx_mode(void);
 
-#define PPM_CHANNELS 16
 volatile uint16_t PPM[PPM_CHANNELS] = { 512, 512, 512, 512, 512, 512, 512, 512 , 512, 512, 512, 512, 512, 512, 512, 512 };
 
 const static uint8_t pktsizes[8] = { 0, 7, 11, 12, 16, 17, 21, 0 };
@@ -146,40 +145,6 @@ uint8_t countSetBits(uint16_t x)
   x  = x + (x >> 4);
   x &= 0x0F0F;
   return (x * 0x0101) >> 8;
-}
-
-static uint16_t CRC16_value;
-
-inline void CRC16_reset()
-{
-  CRC16_value = 0;
-}
-
-void CRC16_add(uint8_t c) // CCITT polynome
-{
-  uint8_t i;
-  CRC16_value ^= (uint16_t)c << 8;
-  for (i = 0; i < 8; i++) {
-    if (CRC16_value & 0x8000) {
-      CRC16_value = (CRC16_value << 1) ^ 0x1021;
-    } else {
-      CRC16_value = (CRC16_value << 1);
-    }
-  }
-}
-
-// Halt and blink failure code
-void fatalBlink(uint8_t blinks)
-{
-  while (1) {
-    for (uint8_t i=0; i < blinks; i++) {
-      Red_LED_ON;
-      delay(100);
-      Red_LED_OFF;
-      delay(100);
-    }
-    delay(300);
-  }
 }
 
 // Spectrum analyser 'submode'

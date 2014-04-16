@@ -33,7 +33,6 @@ volatile uint8_t disablePPM = 0;
 uint8_t failsafeActive = 0;
 
 uint16_t failsafePPM[PPM_CHANNELS];
-uint8_t  failsafeIsValid = 0;
 
 uint8_t linkAcquired = 0;
 uint8_t numberOfLostPackets = 0;
@@ -151,58 +150,9 @@ void set_RSSI_output()
   }
 }
 
-void failsafeInvalidate(void)
-{
-  failsafeIsValid = 0;
-  myEEPROMwrite(EEPROM_FAILSAFE_OFFSET, 0);
-}
-
-void failsafeSave(void)
-{
-  uint8_t ee_buf[20];
-
-  for (int16_t i = 0; i < PPM_CHANNELS; i++) {
-    failsafePPM[i] = PPM[i];
-  }
-
-  failsafeIsValid = 1;
-
-  packChannels(6, failsafePPM, ee_buf);
-  for (int16_t i = 0; i < 20; i++) {
-    myEEPROMwrite(EEPROM_FAILSAFE_OFFSET + 4 + i, ee_buf[i]);
-  }
-
-  ee_buf[0] = 0xFA;
-  ee_buf[1] = 0x11;
-  ee_buf[2] = 0x5A;
-  ee_buf[3] = 0xFE;
-  for (int16_t i = 0; i < 4; i++) {
-    myEEPROMwrite(EEPROM_FAILSAFE_OFFSET + i, ee_buf[i]);
-  }
-}
-
-void failsafeLoad(void)
-{
-  uint8_t ee_buf[20];
-
-  for (int16_t i = 0; i < 4; i++) {
-    ee_buf[i] = eeprom_read_byte((uint8_t *)(EEPROM_FAILSAFE_OFFSET + i));
-  }
-
-  if ((ee_buf[0] == 0xFA) && (ee_buf[1] == 0x11) && (ee_buf[2] == 0x5A) && (ee_buf[3] == 0xFE)) {
-    for (int16_t i = 0; i < 20; i++) {
-      ee_buf[i] = eeprom_read_byte((uint8_t *)(EEPROM_FAILSAFE_OFFSET + 4 + i));
-    }
-    unpackChannels(6, failsafePPM, ee_buf);
-    failsafeIsValid = 1;
-  } else {
-    failsafeIsValid = 0;
-  }
-}
-
 void failsafeApply()
 {
-  if (failsafeIsValid) {
+  if (failsafePPM[0] != 0xffff) {
     for (int16_t i = 0; i < PPM_CHANNELS; i++) {
       if (i != rx_config.RSSIpwm) {
         cli();
@@ -295,7 +245,7 @@ void setupOutputs()
   ppmCountter = 0;
   TIMSK1 |= (1 << TOIE1);
 
-  if ((rx_config.flags & IMMEDIATE_OUTPUT) && failsafeIsValid) {
+  if ((rx_config.flags & IMMEDIATE_OUTPUT) && failsafePPM[0]!=0xffff) {
     failsafeApply();
     disablePPM=0;
     disablePWM=0;
@@ -316,7 +266,7 @@ void updateLBeep(bool packetLost)
   }
 }
 
-void updateSwitches()
+static inline void updateSwitches()
 {
   uint8_t i;
   for (i = 0; i < OUTPUTS; i++) {
@@ -384,12 +334,12 @@ uint8_t bindReceive(uint32_t timeout)
         for (uint8_t i = 0; i < sizeof(rx_config); i++) {
           *(((uint8_t*) &rx_config) + i) = spiReadData();
         }
-        rxWriteEeprom();
+        accessEEPROM(0, true);
         rxb = 'U';
         tx_packet(&rxb, 1); // ACK that we updated settings
       } else if (rxb == 'f') {
         uint8_t rxc_buf[33];
-        if (failsafeIsValid) {
+        if (failsafePPM[0]!=0xffff) {
           rxc_buf[0]='F';
           for (uint8_t i = 0; i < 16; i++) {
             uint16_t us = servoBits2Us(failsafePPM[i]);
@@ -405,13 +355,14 @@ uint8_t bindReceive(uint32_t timeout)
           uint16_t val;
           val = (uint16_t)spiReadData() << 8;
           val += spiReadData();
-          PPM[i] = servoUs2Bits(val);
+          failsafePPM[i] = servoUs2Bits(val);
         }
         rxb = 'G';
         failsafeSave();
         tx_packet(&rxb, 1);
       } else if (rxb == 'G') {
-        failsafeInvalidate();
+        failsafePPM[0] = 0xffff;
+        failsafeSave();
         rxb = 'G';
         tx_packet(&rxb, 1);
       }
@@ -811,8 +762,8 @@ retry:
     if ((rx_buf[0] & 0x3e) == 0x00) {
       cli();
       unpackChannels(bind_data.flags & 7, PPM, rx_buf + 1);
-#if DEBUG_DUMP_PPM
-      for (uint8_t i=0; i<8; i++) {
+#ifdef DEBUG_DUMP_PPM
+      for (uint8_t i = 0; i < 8; i++) {
         Serial.print(PPM[i]);
         Serial.print(',');
       }
@@ -822,6 +773,9 @@ retry:
       sei();
       if (rx_buf[0] & 0x01) {
         if (!fs_saved) {
+          for (int16_t i = 0; i < PPM_CHANNELS; i++) {
+            failsafePPM[i] = PPM[i];
+          }
           failsafeSave();
           fs_saved = 1;
         }
