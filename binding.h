@@ -64,21 +64,12 @@
 #define MAX_INTERVAL 255
 
 #define BINDING_POWER     0x06 // not lowest since may result fail with RFM23BP
-#define BINDING_VERSION   9
-
-#define EEPROM_PROFILE_OFFSET  0x040 // profile number on TX
-#ifdef COMPILE_TX
-#define EEPROM_OFFSET(no)      (0x100 + (no)*0x40)
-#else
-#define EEPROM_OFFSET(no)      0x100
-#endif
-#define EEPROM_RX_OFFSET       0x140 // RX specific config struct
-#define EEPROM_FAILSAFE_OFFSET 0x180
-
 
 #define TELEMETRY_PACKETSIZE 9
 
-#define BIND_MAGIC (0xDEC1BE15 + BINDING_VERSION)
+#define BIND_MAGIC (0xDEC1BE15 + (OPENLRSNG_VERSION & 0xfff0))
+#define BINDING_VERSION ((OPENLRSNG_VERSION & 0x0ff0)>>4)
+
 static uint8_t default_hop_list[] = {DEFAULT_HOPLIST};
 
 // HW frequency limits
@@ -99,7 +90,31 @@ static uint8_t default_hop_list[] = {DEFAULT_HOPLIST};
 #  define BINDING_FREQUENCY 435000000 // Hz
 #endif
 
-#define MAXHOPS 24
+#define MAXHOPS      24
+#define PPM_CHANNELS 16
+
+uint8_t activeProfile = 0;
+
+struct tx_config {
+  uint8_t  rfm_type;
+  uint32_t max_frequency;
+  uint32_t flags;
+} tx_config;
+
+struct RX_config {
+  uint8_t  rx_type; // RX type fillled in by RX, do not change
+  uint8_t  pinMapping[13];
+  uint8_t  flags;
+  uint8_t  RSSIpwm;
+  uint32_t beacon_frequency;
+  uint8_t  beacon_deadtime;
+  uint8_t  beacon_interval;
+  uint16_t minsync;
+  uint8_t  failsafeDelay;
+  uint8_t  ppmStopDelay;
+  uint8_t  pwmStopDelay;
+} rx_config;
+
 
 struct bind_data {
   uint8_t version;
@@ -144,64 +159,140 @@ void myEEPROMwrite(int16_t addr, uint8_t data)
   }
 }
 
-#ifdef COMPILE_TX
-#define TX_PROFILE_COUNT 4
-uint8_t activeProfile = 0;
+static uint16_t CRC16_value;
 
-void profileSet()
+inline void CRC16_reset()
 {
-  myEEPROMwrite(EEPROM_PROFILE_OFFSET, activeProfile);
+  CRC16_value = 0;
 }
 
-void  profileInit()
+void CRC16_add(uint8_t c) // CCITT polynome
 {
-  activeProfile = eeprom_read_byte((uint8_t *)EEPROM_PROFILE_OFFSET);
-  if (activeProfile >= TX_PROFILE_COUNT) {
-    activeProfile = 0;
-    profileSet();
+  uint8_t i;
+  CRC16_value ^= (uint16_t)c << 8;
+  for (i = 0; i < 8; i++) {
+    if (CRC16_value & 0x8000) {
+      CRC16_value = (CRC16_value << 1) ^ 0x1021;
+    } else {
+      CRC16_value = (CRC16_value << 1);
+    }
   }
 }
 
-void profileSwap(uint8_t profile)
+// Halt and blink failure code
+void fatalBlink(uint8_t blinks)
 {
-  profileInit();
-  if ((activeProfile != profile) && (profile < TX_PROFILE_COUNT)) {
-    activeProfile = profile;
-    profileSet();
+  while (1) {
+    for (uint8_t i=0; i < blinks; i++) {
+      Red_LED_ON;
+      delay(100);
+      Red_LED_OFF;
+      delay(100);
+    }
+    delay(300);
   }
 }
+
+#ifndef COMPILE_TX
+extern uint16_t failsafePPM[PPM_CHANNELS];
 #endif
 
-int16_t bindReadEeprom()
+#define EEPROM_SIZE 1024 // EEPROM is 1k on 328p and 32u4
+#define ROUNDUP(x) (((x)+15)&0xfff0)
+#define MIN256(x)  (((x)<256)?256:(x))
+#ifdef COMPILE_TX
+#define EEPROM_DATASIZE MIN256(ROUNDUP((sizeof(tx_config) + sizeof(bind_data) + 4) * 4 + 3))
+#else
+#define EEPROM_DATASIZE MIN256(ROUNDUP(sizeof(rx_config) + sizeof(bind_data) + sizeof(failsafePPM) + 6))
+#endif
+
+
+bool accessEEPROM(uint8_t dataType, bool write)
 {
-  uint32_t temp = 0;
-  for (uint8_t i = 0; i < 4; i++) {
-    temp = (temp << 8) + eeprom_read_byte((uint8_t *)(EEPROM_OFFSET(activeProfile) + i));
-  }
-  if (temp != BIND_MAGIC) {
-    return 0;
-  }
+  void *dataAddress = NULL;
+  uint16_t dataSize = 0;
 
-  for (uint8_t i = 0; i < sizeof(bind_data); i++) {
-    *((uint8_t*)&bind_data + i) = eeprom_read_byte((uint8_t *)(EEPROM_OFFSET(activeProfile) + 4 + i));
-  }
+  uint16_t addressNeedle = 0;
+  uint16_t addressBase = 0;
+  uint16_t CRC = 0;
 
-  if (bind_data.version != BINDING_VERSION) {
-    return 0;
-  }
+  do {
+start:
+#ifdef COMPILE_TX
+    if (dataType == 0) {
+      dataAddress = &tx_config;
+      dataSize = sizeof(tx_config);
+      addressNeedle = (sizeof(tx_config) + sizeof(bind_data) + 4) * activeProfile;
+    } else if (dataType == 1) {
+      dataAddress = &bind_data;
+      dataSize = sizeof(bind_data);
+      addressNeedle = sizeof(tx_config) + 2;
+      addressNeedle += (sizeof(tx_config) + sizeof(bind_data) + 4) * activeProfile;
+    } else if (dataType == 2) {
+      dataAddress = &activeProfile;
+      dataSize = 1;
+      addressNeedle = (sizeof(tx_config) + sizeof(bind_data) + 4) * 4; // activeProfile is stored behind all 4 profiles
+    }
+#else
+    if (dataType == 0) {
+      dataAddress = &rx_config;
+      dataSize = sizeof(rx_config);
+      addressNeedle = 0;
+    } else if (dataType == 1) {
+      dataAddress = &bind_data;
+      dataSize = sizeof(bind_data);
+      addressNeedle = sizeof(rx_config) + 2;
+    } else if (dataType == 2) {
+      dataAddress = &failsafePPM;
+      dataSize = sizeof(failsafePPM);
+      addressNeedle = sizeof(rx_config) + sizeof(bind_data) + 4;
+    }
+#endif
+    addressNeedle += addressBase;
+    CRC16_reset();
 
-  return 1;
+    for (uint8_t i = 0; i < dataSize; i++, addressNeedle++) {
+      if (!write) {
+        *((uint8_t*)dataAddress + i) = eeprom_read_byte((uint8_t *)(addressNeedle));
+      } else {
+        myEEPROMwrite(addressNeedle, *((uint8_t*)dataAddress + i));
+      }
+
+      CRC16_add(*((uint8_t*)dataAddress + i));
+    }
+
+    if (!write) {
+      CRC = eeprom_read_byte((uint8_t *)addressNeedle) << 8 | eeprom_read_byte((uint8_t *)(addressNeedle + 1));
+
+      if (CRC16_value == CRC) {
+        // recover corrupted data
+        // write operation is performed after every successful read operation, this will keep all cells valid
+        write = true;
+        addressBase = 0;
+        goto start;
+      } else {
+        // try next block
+      }
+    } else {
+      myEEPROMwrite(addressNeedle++, CRC16_value >> 8);
+      myEEPROMwrite(addressNeedle, CRC16_value & 0x00FF);
+    }
+    addressBase += EEPROM_DATASIZE;
+  } while (addressBase <= (EEPROM_SIZE - EEPROM_DATASIZE));
+  return (write); // success on write, failure on read
 }
 
-void bindWriteEeprom(void)
+bool bindReadEeprom()
 {
-  for (uint8_t i = 0; i < 4; i++) {
-    myEEPROMwrite(EEPROM_OFFSET(activeProfile) + i, (BIND_MAGIC >> ((3 - i) * 8)) & 0xff);
+  if (accessEEPROM(1, false) && (bind_data.version == BINDING_VERSION)) {
+    return true;
   }
+  return false;
+}
 
-  for (uint8_t i = 0; i < sizeof(bind_data); i++) {
-    myEEPROMwrite(EEPROM_OFFSET(activeProfile) + 4 + i, *((uint8_t*)&bind_data + i));
-  }
+void bindWriteEeprom()
+{
+  accessEEPROM(1, true);
 }
 
 void bindInitDefaults(void)
@@ -222,11 +313,59 @@ void bindInitDefaults(void)
   bind_data.flags = DEFAULT_FLAGS;
 }
 
+#ifdef COMPILE_TX
+#define TX_PROFILE_COUNT 4
+
+void profileSet()
+{
+  accessEEPROM(2, true);
+}
+
+void profileInit()
+{
+  accessEEPROM(2, false);
+  if (activeProfile >= TX_PROFILE_COUNT) {
+    activeProfile = 0;
+    profileSet();
+  }
+}
+
+void profileSwap(uint8_t profile)
+{
+  profileInit();
+  if ((activeProfile != profile) && (profile < TX_PROFILE_COUNT)) {
+    activeProfile = profile;
+    profileSet();
+  }
+}
+
+void txInitDefaults()
+{
+  tx_config.max_frequency = MAX_RFM_FREQUENCY;
+  tx_config.flags = 0x00;
+}
+
+void txWriteEeprom()
+{
+  accessEEPROM(0,true);
+  accessEEPROM(1,true);
+}
+
+void txReadEeprom()
+{
+  if ((!accessEEPROM(0, false)) || (!accessEEPROM(1, false))) {
+    txInitDefaults();
+    bindInitDefaults();
+    txWriteEeprom();
+  }
+}
+
 void bindRandomize(void)
 {
+  uint8_t emergency_counter = 0;
   uint8_t c;
-  uint32_t t=0;
-  while (t==0) {
+  uint32_t t = 0;
+  while (t == 0) {
     t = micros();
   }
   srandom(t);
@@ -236,10 +375,15 @@ void bindRandomize(void)
     bind_data.rf_magic = (bind_data.rf_magic << 8) + (random() % 255);
   }
 
+  // TODO: verify if this works properly
   for (c = 0; (c < MAXHOPS) && (bind_data.hopchannel[c] != 0); c++) {
     uint8_t ch;
-
 again:
+    if (emergency_counter++ == 255) {
+      bindInitDefaults();
+      return;
+    }
+
     ch = (random() % 50) + 1;
     // don't allow same channel twice
     for (uint8_t i = 0; i < c; i++) {
@@ -248,9 +392,17 @@ again:
       }
     }
 
+    // don't allow frequencies higher then tx_config.max_frequency
+    uint32_t real_frequency = bind_data.rf_frequency + ch * bind_data.rf_channel_spacing * 10000;
+    if (real_frequency > tx_config.max_frequency) {
+      goto again;
+    }
+
     bind_data.hopchannel[c] = ch;
   }
 }
+#endif
+
 
 #define PPM_MAX_8CH       0x01
 #define ALWAYS_BIND       0x02
@@ -288,30 +440,17 @@ uint32_t delayInMsLong(uint8_t d)
   return delayInMs((uint16_t)d + 100);
 }
 
-struct RX_config {
-  uint8_t  rx_type; // RX type fillled in by RX, do not change
-  uint8_t  pinMapping[13];
-  uint8_t  flags;
-  uint8_t  RSSIpwm;
-  uint32_t beacon_frequency;
-  uint8_t  beacon_deadtime;
-  uint8_t  beacon_interval;
-  uint16_t minsync;
-  uint8_t  failsafeDelay;
-  uint8_t  ppmStopDelay;
-  uint8_t  pwmStopDelay;
-} rx_config;
-
 #ifndef COMPILE_TX
 // following is only needed on receiver
-void rxWriteEeprom()
+void failsafeSave(void)
 {
-  for (uint8_t i = 0; i < 4; i++) {
-    myEEPROMwrite(EEPROM_RX_OFFSET + i, (BIND_MAGIC >> ((3 - i) * 8)) & 0xff);
-  }
+  accessEEPROM(2, true);
+}
 
-  for (uint8_t i = 0; i < sizeof(rx_config); i++) {
-    myEEPROMwrite(EEPROM_RX_OFFSET + 4 + i, *((uint8_t*)&rx_config + i));
+void failsafeLoad(void)
+{
+  if (!accessEEPROM(2, false)) {
+    failsafePPM[0]=0xffff;
   }
 }
 
@@ -353,36 +492,16 @@ void rxInitDefaults(bool save)
   rx_config.minsync = 3000;
 
   if (save) {
-    rxWriteEeprom();
+    accessEEPROM(0, true);
+    failsafePPM[0] = 0xffff;
+    failsafeSave();
   }
 }
 
 void rxReadEeprom()
 {
-  uint32_t temp = 0;
-
-  for (uint8_t i = 0; i < 4; i++) {
-    temp = (temp << 8) + eeprom_read_byte((uint8_t *)(EEPROM_RX_OFFSET + i));
-  }
-
-  if (temp != BIND_MAGIC) {
+  if (!accessEEPROM(0, false)) {
     rxInitDefaults(1);
-  } else {
-    for (uint8_t i = 0; i < sizeof(rx_config); i++) {
-      *((uint8_t*)&rx_config + i) = eeprom_read_byte((uint8_t *)(EEPROM_RX_OFFSET + 4 + i));
-    }
-#if (BOARD_TYPE == 3)
-    if (rx_config.rx_type != RX_FLYTRON8CH) {
-      rxInitDefaults(1);
-    }
-#elif (BOARD_TYPE == 5)
-    if (rx_config.rx_type != RX_OLRSNG4CH) {
-      rxInitDefaults(1);
-    }
-#else
-#error FIXME
-#endif
-    lrs_puts("RXconf loaded");
   }
 }
 
