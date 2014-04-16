@@ -178,9 +178,9 @@ void bindPrint(void)
   }
 
   lrs_printf("9) Serial baudrate:      %ld\r\n", bind_data.serial_baudrate);
-  lrs_printf("0) Mute buzzer (mostly): "); printYesNo(bind_data.flags & MUTE_TX);
-  lrs_printf("A) Inverted PPM in:      "); printYesNo(bind_data.flags & INVERTED_PPMIN);
-  lrs_printf("B) Micro (half) PPM:     "); printYesNo(bind_data.flags & MICROPPM);
+  lrs_printf("0) Mute buzzer (mostly): "); printYesNo(tx_config.flags & MUTE_TX);
+  lrs_printf("A) Inverted PPM in:      "); printYesNo(tx_config.flags & INVERTED_PPMIN);
+  lrs_printf("B) Micro (half) PPM:     "); printYesNo(tx_config.flags & MICROPPM);
   lrs_printf("Calculated packet interval: %lu == %lu Hz\r\n",
              getInterval(&bind_data), 1000000L / getInterval(&bind_data));
 }
@@ -792,7 +792,7 @@ void handleCLImenu(char c)
     case 's':
     case 'S':
       // save settings to EEPROM
-      bindWriteEeprom();
+      txWriteEeprom();
       lrs_puts("Settings saved to EEPROM");
       // leave CLI
       CLI_menu = -2;
@@ -801,7 +801,7 @@ void handleCLImenu(char c)
     case 'X':
     case 0x1b: //ESC
       // restore settings from EEPROM
-      bindReadEeprom();
+      txReadEeprom();
       lrs_puts("Reverted settings from EEPROM");
       // leave CLI
       CLI_menu = -2;
@@ -810,6 +810,7 @@ void handleCLImenu(char c)
     case 'I':
       // restore factory settings
       bindInitDefaults();
+      txInitDefaults();
       lrs_puts("Loaded factory defaults");
       break;
     case 'r':
@@ -845,19 +846,19 @@ void handleCLImenu(char c)
       break;
     case '0':
       lrs_puts("Toggled TX muting!");
-      bind_data.flags ^= MUTE_TX;
+      tx_config.flags ^= MUTE_TX;
       CLI_menu = -1;
       break;
     case 'a':
     case 'A':
       lrs_puts("Toggled inverted PPM!");
-      bind_data.flags ^= INVERTED_PPMIN;
+      tx_config.flags ^= INVERTED_PPMIN;
       CLI_menu = -1;
       break;
     case 'b':
     case 'B':
       lrs_puts("Toggled microPPM");
-      bind_data.flags ^= MICROPPM;
+      tx_config.flags ^= MICROPPM;
       CLI_menu = -1;
       break;
     case 'z':
