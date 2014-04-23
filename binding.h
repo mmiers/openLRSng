@@ -26,30 +26,34 @@
 #define DEFAULT_BAUDRATE 57600
 #define DEFAULT_SERIAL_DOWNLINK 29
 
-// FLAGS: 16bits
+// TX_CONFIG flag masks
+#define MUTE_TX             0x10 // do not beep on telemetry loss
+#define MICROPPM            0x20
+#define INVERTED_PPMIN      0x40
+#define WATCHDOG_USED       0x80 // read only flag, only sent to configurator
 
-#define TELEMETRY_OFF       0x0000
-#define TELEMETRY_PASSTHRU  0x0008
-#define TELEMETRY_FRSKY     0x0010 // covers smartport if used with &
-#define TELEMETRY_SMARTPORT 0x0018
-#define TELEMETRY_MASK      0x0018
+// RX_CONFIG flag masks
+#define PPM_MAX_8CH         0x01
+#define ALWAYS_BIND         0x02
+#define SLAVE_MODE          0x04
+#define IMMEDIATE_OUTPUT    0x08
+#define REVERSE_PPM_RSSI    0x10
+#define WATCHDOG_USED       0x80 // read only flag, only sent to configurator
 
-#define CHANNELS_4_4        0x0001
-#define CHANNELS_8          0x0002
-#define CHANNELS_8_4        0x0003
-#define CHANNELS_12         0x0004
-#define CHANNELS_12_4       0x0005
-#define CHANNELS_16         0x0006
-
-#define MUTE_TX             0x0020 // do not beep on telemetry loss
-
-#define INVERTED_PPMIN      0x0040
-#define MICROPPM            0x0080
-
-#define MAVLINK_FRAMING     0x0100
-#define REVERSE_PPM_RSSI    0x0200
-
-#define DEFAULT_FLAGS (CHANNELS_8 | TELEMETRY_PASSTHRU)
+// BIND_DATA flag masks
+#define TELEMETRY_OFF       0x00
+#define TELEMETRY_PASSTHRU  0x08
+#define TELEMETRY_FRSKY     0x10 // covers smartport if used with &
+#define TELEMETRY_SMARTPORT 0x18
+#define TELEMETRY_MASK      0x18
+#define CHANNELS_4_4        0x01
+#define CHANNELS_8          0x02
+#define CHANNELS_8_4        0x03
+#define CHANNELS_12         0x04
+#define CHANNELS_12_4       0x05
+#define CHANNELS_16         0x06
+#define MAVLINK_FRAMING     0x20
+#define DEFAULT_FLAGS       (CHANNELS_8 | TELEMETRY_PASSTHRU)
 
 //####### MAVLink #######
 #define MAVLINK_INJECT_INTERVAL 100000
@@ -411,13 +415,6 @@ again:
   }
 }
 #endif
-
-
-#define PPM_MAX_8CH       0x01
-#define ALWAYS_BIND       0x02
-#define SLAVE_MODE        0x04
-#define IMMEDIATE_OUTPUT  0x08
-#define WATCHDOG_USED     0x80 // read only flag, only sent to configurator
 
 // non linear mapping
 // 0 - 0

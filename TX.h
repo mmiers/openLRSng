@@ -372,7 +372,9 @@ void setup(void)
   printVersion(version);
   lrs_printf(" on HW %d\r\n", BOARD_TYPE);
 
-  delay(200);
+  if (ppmAge == 255) {
+    delay(200);
+  }
   checkBND();
 
   if (bind_data.serial_baudrate && (bind_data.serial_baudrate < 5)) {
@@ -397,14 +399,10 @@ void setup(void)
   serial_tail = 0;
   serial_okToSend = 0;
 
-  delay(300);
-  buzzerOn(BZ_FREQ);
-  delay(100);
-  buzzerOff();
-  for (uint8_t i = 0; i < activeProfile; i++) {
-    delay(100);
+  for (uint8_t i = 0; i <= activeProfile; i++) {
+    delay(50);
     buzzerOn(BZ_FREQ);
-    delay(100);
+    delay(50);
     buzzerOff();
   }
 
