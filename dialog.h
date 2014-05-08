@@ -205,6 +205,9 @@ void rxPrint(void)
     lrs_puts("OpenLRSngRX mini 4/6ch");
   } else if (rx_config.rx_type == RX_DTFUHF10CH) {
     lrs_puts("DTF UHF 32-bit 10ch");
+  } else if (rx_config.rx_type == RX_PTOWER) {
+    lrs_puts("DTF UHF 32-bit 10ch");
+    lrs_puts("PowerTower");
   }
   for (i=0; i < rxcNumberOfOutputs; i++) {
     lrs_putc((char)(((i + 1) > 9) ? (i + 'A' - 9) : (i + '1')));
