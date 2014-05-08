@@ -596,8 +596,8 @@ void loop(void)
 
 #ifdef __AVR_ATmega32U4__
   if (serialMode) {
-    while (Serial.available()) {
-      processChannelsFromSerial(Serial.read());
+    while (SerialAvailable(TelemetrySerial)) {
+      processChannelsFromSerial(SerialRead(TelemetrySerial));
     }
   }
 #endif
